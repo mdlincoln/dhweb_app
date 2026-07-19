@@ -4,15 +4,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0056_auto_20200504_1148'),
+        ("abstracts", "0056_auto_20200504_1148"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='conference',
-            name='entry_status',
-            field=models.CharField(choices=[('n', 'Not started'), ('i', 'Incomplete'), ('r', 'Needs review'), ('c', 'Complete')], db_index=True, default='n', help_text='Have all the abstracts for this conference been entered?', max_length=1),
+            model_name="conference",
+            name="entry_status",
+            field=models.CharField(
+                choices=[
+                    ("n", "Not started"),
+                    ("i", "Incomplete"),
+                    ("r", "Needs review"),
+                    ("c", "Complete"),
+                ],
+                db_index=True,
+                default="n",
+                help_text="Have all the abstracts for this conference been entered?",
+                max_length=1,
+            ),
         ),
     ]

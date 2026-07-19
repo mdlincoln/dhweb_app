@@ -5,20 +5,31 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0038_merge_20200430_1058'),
+        ("abstracts", "0038_merge_20200430_1058"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='work',
-            name='full_text',
-            field=models.TextField(blank=True, default='', help_text='Full text content of the abstract, including references, but excluding authorship information.', max_length=50000),
+            model_name="work",
+            name="full_text",
+            field=models.TextField(
+                blank=True,
+                default="",
+                help_text="Full text content of the abstract, including references, but excluding authorship information.",
+                max_length=50000,
+            ),
         ),
         migrations.AlterField(
-            model_name='work',
-            name='parent_session',
-            field=models.ForeignKey(blank=True, help_text='If this work was part of a multi-paper organized session, this is the entry for the parent session', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='session_papers', to='abstracts.Work'),
+            model_name="work",
+            name="parent_session",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="If this work was part of a multi-paper organized session, this is the entry for the parent session",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="session_papers",
+                to="abstracts.Work",
+            ),
         ),
     ]

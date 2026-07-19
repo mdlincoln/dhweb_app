@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0032_auto_20200424_1220'),
+        ("abstracts", "0032_auto_20200424_1220"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='conference',
-            name='full_text_public',
+            model_name="conference",
+            name="full_text_public",
             field=models.BooleanField(db_index=True, default=False),
         ),
     ]

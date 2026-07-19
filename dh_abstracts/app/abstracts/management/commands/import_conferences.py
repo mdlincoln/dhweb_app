@@ -32,7 +32,6 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-
         with open(options["filepath"][0], newline="") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:

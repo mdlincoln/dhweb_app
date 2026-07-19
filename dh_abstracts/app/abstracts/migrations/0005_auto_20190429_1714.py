@@ -5,14 +5,15 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0004_auto_20190429_1712'),
+        ("abstracts", "0004_auto_20190429_1712"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='work',
-            index=django.contrib.postgres.indexes.GinIndex(fields=['search_text'], name='abstracts_w_search__cfd9ce_gin'),
+            model_name="work",
+            index=django.contrib.postgres.indexes.GinIndex(
+                fields=["search_text"], name="abstracts_w_search__cfd9ce_gin"
+            ),
         ),
     ]

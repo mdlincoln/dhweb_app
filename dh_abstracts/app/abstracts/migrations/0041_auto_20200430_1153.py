@@ -4,19 +4,18 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0040_auto_20200430_1143'),
+        ("abstracts", "0040_auto_20200430_1143"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='conference',
-            old_name='venue',
-            new_name='short_title',
+            model_name="conference",
+            old_name="venue",
+            new_name="short_title",
         ),
         migrations.AlterUniqueTogether(
-            name='conference',
-            unique_together={('year', 'short_title')},
+            name="conference",
+            unique_together={("year", "short_title")},
         ),
     ]

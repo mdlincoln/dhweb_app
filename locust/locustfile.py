@@ -108,4 +108,3 @@ class QuickstartUser(HttpUser):
             f"/institution-autocomplete?q={fake.random_lowercase_letter()}",
             name="/institution-autocomplete?q",
         )
-

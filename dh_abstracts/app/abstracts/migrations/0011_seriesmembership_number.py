@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0010_auto_20190507_1328'),
+        ("abstracts", "0010_auto_20190507_1328"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='seriesmembership',
-            name='number',
-            field=models.IntegerField(blank=True, help_text='Order of this conference within this series.', null=True),
+            model_name="seriesmembership",
+            name="number",
+            field=models.IntegerField(
+                blank=True,
+                help_text="Order of this conference within this series.",
+                null=True,
+            ),
         ),
     ]

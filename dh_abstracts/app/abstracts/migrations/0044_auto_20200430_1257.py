@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0043_remove_conference_venue_abbreviation'),
+        ("abstracts", "0043_remove_conference_venue_abbreviation"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='conference',
-            name='year',
+            model_name="conference",
+            name="year",
             field=models.PositiveIntegerField(),
         ),
     ]

@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0021_work_url'),
+        ("abstracts", "0021_work_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='authorship',
-            name='last_updated',
+            model_name="authorship",
+            name="last_updated",
             field=models.DateTimeField(auto_now=True, db_index=True),
         ),
         migrations.AddField(
-            model_name='work',
-            name='last_updated',
+            model_name="work",
+            name="last_updated",
             field=models.DateTimeField(auto_now=True, db_index=True),
         ),
     ]

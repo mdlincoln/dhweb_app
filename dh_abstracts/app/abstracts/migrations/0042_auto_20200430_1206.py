@@ -13,7 +13,6 @@ def transfer_abbreviations(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("abstracts", "0041_auto_20200430_1153")]
 
     operations = [migrations.RunPython(transfer_abbreviations)]

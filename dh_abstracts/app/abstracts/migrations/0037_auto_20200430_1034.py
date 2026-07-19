@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0036_auto_20200429_1018'),
+        ("abstracts", "0036_auto_20200429_1018"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='organizer',
-            name='abbreviation',
+            model_name="organizer",
+            name="abbreviation",
             field=models.CharField(max_length=30, unique=True),
         ),
     ]

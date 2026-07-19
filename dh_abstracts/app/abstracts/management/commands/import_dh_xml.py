@@ -19,7 +19,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-
         """
         Find conference. If you put in a bad ID, then this stops right away.
         """

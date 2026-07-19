@@ -6,19 +6,42 @@ import filer.fields.file
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('filer', '0011_auto_20190418_0137'),
-        ('abstracts', '0030_auto_20200421_1457'),
+        ("filer", "0011_auto_20190418_0137"),
+        ("abstracts", "0030_auto_20200421_1457"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ConferenceDocument',
+            name="ConferenceDocument",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('conference', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='documents', to='abstracts.Conference')),
-                ('document', filer.fields.file.FilerFileField(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='document_conference', to='filer.File')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "conference",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="documents",
+                        to="abstracts.Conference",
+                    ),
+                ),
+                (
+                    "document",
+                    filer.fields.file.FilerFileField(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="document_conference",
+                        to="filer.File",
+                    ),
+                ),
             ],
         ),
     ]

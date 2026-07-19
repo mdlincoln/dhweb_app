@@ -19,7 +19,6 @@ def merge_disciplines_to_topics(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("abstracts", "0068_auto_20200818_1359"),
     ]

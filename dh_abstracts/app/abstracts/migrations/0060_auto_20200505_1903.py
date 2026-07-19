@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0059_auto_20200505_1902'),
+        ("abstracts", "0059_auto_20200505_1902"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='conferenceseries',
-            options={'ordering': ['abbreviation']},
+            name="conferenceseries",
+            options={"ordering": ["abbreviation"]},
         ),
     ]

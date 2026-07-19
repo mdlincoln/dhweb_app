@@ -5,20 +5,27 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0031_conferencedocument'),
+        ("abstracts", "0031_conferencedocument"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='conference',
-            name='country',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='conferences', to='abstracts.Country'),
+            model_name="conference",
+            name="country",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="conferences",
+                to="abstracts.Country",
+            ),
         ),
         migrations.AlterField(
-            model_name='conference',
-            name='hosting_institutions',
-            field=models.ManyToManyField(blank=True, related_name='conferences', to='abstracts.Institution'),
+            model_name="conference",
+            name="hosting_institutions",
+            field=models.ManyToManyField(
+                blank=True, related_name="conferences", to="abstracts.Institution"
+            ),
         ),
     ]

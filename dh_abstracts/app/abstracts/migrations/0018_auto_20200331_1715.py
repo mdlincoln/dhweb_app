@@ -10,7 +10,6 @@ def remove_unpublished(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("abstracts", "0017_auto_20200331_1642")]
 
     operations = [migrations.RunPython(remove_unpublished)]

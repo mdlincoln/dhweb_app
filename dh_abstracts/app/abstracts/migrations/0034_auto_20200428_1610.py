@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0033_conference_full_text_public'),
+        ("abstracts", "0033_conference_full_text_public"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='conference',
-            name='full_text_public',
-            field=models.BooleanField(db_index=True, default=False, help_text="Should the full text for this conference's abstracts be publicly available?"),
+            model_name="conference",
+            name="full_text_public",
+            field=models.BooleanField(
+                db_index=True,
+                default=False,
+                help_text="Should the full text for this conference's abstracts be publicly available?",
+            ),
         ),
     ]

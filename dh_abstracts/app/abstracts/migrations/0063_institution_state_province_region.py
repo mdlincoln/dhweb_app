@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0062_auto_20200511_1302'),
+        ("abstracts", "0062_auto_20200511_1302"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='institution',
-            name='state_province_region',
-            field=models.CharField(blank=True, default='', max_length=1000, verbose_name='State / Province / Region'),
+            model_name="institution",
+            name="state_province_region",
+            field=models.CharField(
+                blank=True,
+                default="",
+                max_length=1000,
+                verbose_name="State / Province / Region",
+            ),
         ),
     ]

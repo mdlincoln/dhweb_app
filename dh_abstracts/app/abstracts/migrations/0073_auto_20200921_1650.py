@@ -18,7 +18,6 @@ def generate_conference_search_text(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("abstracts", "0072_conference_search_text"),
     ]

@@ -5,20 +5,28 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0028_auto_20200414_1149'),
+        ("abstracts", "0028_auto_20200414_1149"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='work',
-            name='parent_session',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='session_papers', to='abstracts.Work'),
+            model_name="work",
+            name="parent_session",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="session_papers",
+                to="abstracts.Work",
+            ),
         ),
         migrations.AddField(
-            model_name='worktype',
-            name='is_parent',
-            field=models.BooleanField(db_index=True, default=False, help_text="Works of this type are considered multi-paper panels/sessions and may contain 'child' abstracts"),
+            model_name="worktype",
+            name="is_parent",
+            field=models.BooleanField(
+                db_index=True,
+                default=False,
+                help_text="Works of this type are considered multi-paper panels/sessions and may contain 'child' abstracts",
+            ),
         ),
     ]

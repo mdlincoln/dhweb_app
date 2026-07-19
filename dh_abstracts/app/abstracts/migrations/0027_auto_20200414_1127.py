@@ -5,45 +5,51 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0026_auto_20200403_1356'),
+        ("abstracts", "0026_auto_20200403_1356"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='conference',
-            name='city',
-            field=models.CharField(blank=True, default='', max_length=1000),
+            model_name="conference",
+            name="city",
+            field=models.CharField(blank=True, default="", max_length=1000),
         ),
         migrations.AddField(
-            model_name='conference',
-            name='country',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='conferences', to='abstracts.Country'),
+            model_name="conference",
+            name="country",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="conferences",
+                to="abstracts.Country",
+            ),
         ),
         migrations.AddField(
-            model_name='conference',
-            name='end_date',
+            model_name="conference",
+            name="end_date",
             field=models.DateField(null=True),
         ),
         migrations.AddField(
-            model_name='conference',
-            name='hosting_institutions',
-            field=models.ManyToManyField(related_name='conferences', to='abstracts.Institution'),
+            model_name="conference",
+            name="hosting_institutions",
+            field=models.ManyToManyField(
+                related_name="conferences", to="abstracts.Institution"
+            ),
         ),
         migrations.AddField(
-            model_name='conference',
-            name='start_date',
+            model_name="conference",
+            name="start_date",
             field=models.DateField(null=True),
         ),
         migrations.AddField(
-            model_name='conference',
-            name='state_province_region',
-            field=models.CharField(blank=True, default='', max_length=1000),
+            model_name="conference",
+            name="state_province_region",
+            field=models.CharField(blank=True, default="", max_length=1000),
         ),
         migrations.AddField(
-            model_name='conference',
-            name='theme_title',
-            field=models.CharField(blank=True, default='', max_length=1000),
+            model_name="conference",
+            name="theme_title",
+            field=models.CharField(blank=True, default="", max_length=1000),
         ),
     ]

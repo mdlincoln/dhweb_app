@@ -20,7 +20,7 @@ class BackOff:
         return self.timer
 
     def increase_time(self):
-        self.timer = self.timer ** self.exponent
+        self.timer = self.timer**self.exponent
         print(f"Increasing time to {self.timer}")
 
     def reduce_time(self):

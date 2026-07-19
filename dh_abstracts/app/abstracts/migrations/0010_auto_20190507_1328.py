@@ -4,18 +4,17 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0009_auto_20190506_1016'),
+        ("abstracts", "0009_auto_20190506_1016"),
     ]
 
     operations = [
         migrations.AlterUniqueTogether(
-            name='seriesmembership',
+            name="seriesmembership",
             unique_together=set(),
         ),
         migrations.RemoveField(
-            model_name='seriesmembership',
-            name='number',
+            model_name="seriesmembership",
+            name="number",
         ),
     ]

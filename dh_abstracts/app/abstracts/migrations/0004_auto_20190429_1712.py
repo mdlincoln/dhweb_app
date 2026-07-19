@@ -4,22 +4,21 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0003_auto_20190428_1731'),
+        ("abstracts", "0003_auto_20190428_1731"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='country',
-            options={'ordering': ['pref_name']},
+            name="country",
+            options={"ordering": ["pref_name"]},
         ),
         migrations.AlterModelOptions(
-            name='work',
-            options={'ordering': ['title']},
+            name="work",
+            options={"ordering": ["title"]},
         ),
         migrations.RemoveIndex(
-            model_name='work',
-            name='abstracts_w_search__cfd9ce_gin',
+            model_name="work",
+            name="abstracts_w_search__cfd9ce_gin",
         ),
     ]

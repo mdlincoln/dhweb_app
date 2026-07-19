@@ -4,17 +4,16 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0069_auto_20200819_1306'),
+        ("abstracts", "0069_auto_20200819_1306"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='work',
-            name='disciplines',
+            model_name="work",
+            name="disciplines",
         ),
         migrations.DeleteModel(
-            name='Discipline',
+            name="Discipline",
         ),
     ]

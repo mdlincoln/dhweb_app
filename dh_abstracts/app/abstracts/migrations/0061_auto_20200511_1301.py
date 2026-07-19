@@ -4,20 +4,27 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0060_auto_20200505_1903'),
+        ("abstracts", "0060_auto_20200505_1903"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='conference',
-            name='abstracts_available',
-            field=models.BooleanField(db_index=True, default=False, help_text='Are the abstracts for this conference available in some format for editors to input?'),
+            model_name="conference",
+            name="abstracts_available",
+            field=models.BooleanField(
+                db_index=True,
+                default=False,
+                help_text="Are the abstracts for this conference available in some format for editors to input?",
+            ),
         ),
         migrations.AddField(
-            model_name='conference',
-            name='program_available',
-            field=models.BooleanField(db_index=True, default=False, help_text='Is a program for this conference available in some format for editors to input?'),
+            model_name="conference",
+            name="program_available",
+            field=models.BooleanField(
+                db_index=True,
+                default=False,
+                help_text="Is a program for this conference available in some format for editors to input?",
+            ),
         ),
     ]

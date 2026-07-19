@@ -6,16 +6,20 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('abstracts', '0022_auto_20200401_0947'),
+        ("abstracts", "0022_auto_20200401_0947"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='work',
-            name='user_last_updated',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='records_last_updated', to=settings.AUTH_USER_MODEL),
+            model_name="work",
+            name="user_last_updated",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="records_last_updated",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

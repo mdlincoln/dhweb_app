@@ -13,7 +13,6 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-
         allowed_topics = [
             "English",
             "Contemporary",
@@ -161,4 +160,3 @@ class Command(BaseCommand):
                     raise
                 for t in matching_topic_strings:
                     target_work.topics.add(models.Topic.objects.get(title=t))
-

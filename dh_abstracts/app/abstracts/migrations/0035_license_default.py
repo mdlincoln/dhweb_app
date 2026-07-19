@@ -4,15 +4,17 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0034_auto_20200428_1610'),
+        ("abstracts", "0034_auto_20200428_1610"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='license',
-            name='default',
-            field=models.BooleanField(default=False, help_text='Make this license the default license applied to any work whose conference has been set to show all full texts.'),
+            model_name="license",
+            name="default",
+            field=models.BooleanField(
+                default=False,
+                help_text="Make this license the default license applied to any work whose conference has been set to show all full texts.",
+            ),
         ),
     ]

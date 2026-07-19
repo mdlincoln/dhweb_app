@@ -4,20 +4,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0012_auto_20190520_1731'),
+        ("abstracts", "0012_auto_20190520_1731"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='work',
-            name='full_text_type',
-            field=models.CharField(blank=True, choices=[('xml', 'XML'), ('txt', 'plain text')], max_length=3),
+            model_name="work",
+            name="full_text_type",
+            field=models.CharField(
+                blank=True,
+                choices=[("xml", "XML"), ("txt", "plain text")],
+                max_length=3,
+            ),
         ),
         migrations.AlterField(
-            model_name='work',
-            name='state',
-            field=models.CharField(choices=[('ac', 'final'), ('su', 'submission')], max_length=2),
+            model_name="work",
+            name="state",
+            field=models.CharField(
+                choices=[("ac", "final"), ("su", "submission")], max_length=2
+            ),
         ),
     ]

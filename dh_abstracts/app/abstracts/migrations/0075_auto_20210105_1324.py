@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0074_language_code'),
+        ("abstracts", "0074_language_code"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='work',
-            name='topics',
-            field=models.ManyToManyField(blank=True, help_text='Optional topics from a conference-specific controlled vocabulary. (Matches ANY of the topics)', related_name='works', to='abstracts.Topic'),
+            model_name="work",
+            name="topics",
+            field=models.ManyToManyField(
+                blank=True,
+                help_text="Optional topics from a conference-specific controlled vocabulary. (Matches ANY of the topics)",
+                related_name="works",
+                to="abstracts.Topic",
+            ),
         ),
     ]

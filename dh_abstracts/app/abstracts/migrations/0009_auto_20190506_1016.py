@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0008_auto_20190430_1001'),
+        ("abstracts", "0008_auto_20190430_1001"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='conference',
-            name='series',
-            field=models.ManyToManyField(blank=True, related_name='conferences', through='abstracts.SeriesMembership', to='abstracts.ConferenceSeries'),
+            model_name="conference",
+            name="series",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="conferences",
+                through="abstracts.SeriesMembership",
+                to="abstracts.ConferenceSeries",
+            ),
         ),
     ]

@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0070_auto_20200819_1357'),
+        ("abstracts", "0070_auto_20200819_1357"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='conference',
-            name='full_text_public',
+            model_name="conference",
+            name="full_text_public",
         ),
     ]

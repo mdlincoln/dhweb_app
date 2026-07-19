@@ -146,7 +146,6 @@ class WorkAutocomplete(ItemLabelAutocomplete):
     raise_exception = True
 
     def get_queryset(self):
-
         qs = Work.objects.all()
 
         parents_only = self.forwarded.get("parents_only", None)
@@ -518,9 +517,9 @@ class XMLView(DetailView, LoginRequiredMixin):
 
     def get(self, request, *args, **kwargs):
         response = HttpResponse(self.get_object().full_text, content_type="xhtml+xml")
-        response[
-            "Content-Disposition"
-        ] = f"attachment; filename={self.get_object().id}.xml"
+        response["Content-Disposition"] = (
+            f"attachment; filename={self.get_object().id}.xml"
+        )
         return response
 
 
@@ -824,7 +823,6 @@ class StandaloneList(View):
 
 
 def home_view(request):
-
     conference_count = Conference.objects.count()
 
     years_count = Conference.objects.aggregate(year_range=Max("year") - Min("year"))[
@@ -864,7 +862,6 @@ def home_view(request):
 @user_is_staff
 @transaction.atomic
 def author_merge_view(request, author_id):
-
     author = get_object_or_404(Author, pk=author_id)
 
     if request.method == "GET":
@@ -1011,7 +1008,6 @@ def private_download_all_tables(request):
 
 @login_required
 def WorkCreate(request):
-
     if request.method == "GET":
         if "conference" in request.GET:
             conf = get_object_or_404(Conference, pk=int(request.GET["conference"]))
@@ -1066,7 +1062,6 @@ def WorkEditAuthorship(request, work_id):
     initial_data = []
 
     for authorship in authorships:
-
         base_data = {
             "author": authorship.author,
             "authorship_order": authorship.authorship_order,
@@ -1780,16 +1775,12 @@ def affiliation_multi_merge(request):
 def wipe_unused(request):
     deletion_dict = {
         "Author": Author.objects.exclude(authorships__isnull=False),
-        "Affiliation": Affiliation.objects.exclude(
-            asserted_by__isnull=False
-        ),
+        "Affiliation": Affiliation.objects.exclude(asserted_by__isnull=False),
         "Institution": Institution.objects.exclude(
             Q(affiliations__asserted_by__isnull=False) | Q(conferences__isnull=False)
         ),
         "Keyword": Keyword.objects.exclude(works__isnull=False),
-        "Appellation": Appellation.objects.exclude(
-            asserted_by__isnull=False
-        ),
+        "Appellation": Appellation.objects.exclude(asserted_by__isnull=False),
     }
 
     if request.method == "POST":
@@ -1950,7 +1941,6 @@ class ConferenceXMLLoad(StaffRequiredMixin, DetailView):
         conference = self.get_object()
         if raw_form.is_valid():
             with TemporaryDirectory() as upload_dir:
-
                 # Write uploaded zip to tempdir
                 with NamedTemporaryFile(dir=upload_dir, suffix=".zip") as tei_zip:
                     with open(tei_zip.name, "wb") as upload_zip:

@@ -53,7 +53,6 @@ class AppellationAutocompleteTest(TestCase):
         self.assertTrue(is_list_unique(result_vals))
 
     def test_q(self):
-
         auth_appellation_ac_response = self.client.get(
             reverse("appellation-autocomplete"), data={"q": "franklin"}
         )

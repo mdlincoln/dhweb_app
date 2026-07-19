@@ -30,4 +30,3 @@ class Command(BaseCommand):
         }
 
         json.dump(all_ids, open("/vol/data/all_ids.json", "w"))
-

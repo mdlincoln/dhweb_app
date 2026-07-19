@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0071_remove_conference_full_text_public'),
+        ("abstracts", "0071_remove_conference_full_text_public"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='conference',
-            name='search_text',
-            field=models.CharField(blank=True, help_text='Any searchable text that should lead to this conference', max_length=20000),
+            model_name="conference",
+            name="search_text",
+            field=models.CharField(
+                blank=True,
+                help_text="Any searchable text that should lead to this conference",
+                max_length=20000,
+            ),
         ),
     ]

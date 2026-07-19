@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('abstracts', '0055_auto_20200504_1138'),
+        ("abstracts", "0055_auto_20200504_1138"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='work',
-            name='full_text',
-            field=models.TextField(blank=True, default='', help_text='Full text content of the abstract, including references, but excluding authorship information.'),
+            model_name="work",
+            name="full_text",
+            field=models.TextField(
+                blank=True,
+                default="",
+                help_text="Full text content of the abstract, including references, but excluding authorship information.",
+            ),
         ),
     ]

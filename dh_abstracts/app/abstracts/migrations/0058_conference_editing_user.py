@@ -6,16 +6,21 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('abstracts', '0057_auto_20200504_1314'),
+        ("abstracts", "0057_auto_20200504_1314"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='conference',
-            name='editing_user',
-            field=models.ForeignKey(blank=True, help_text='User who has currently checked out this conference for data entry', null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL),
+            model_name="conference",
+            name="editing_user",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="User who has currently checked out this conference for data entry",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

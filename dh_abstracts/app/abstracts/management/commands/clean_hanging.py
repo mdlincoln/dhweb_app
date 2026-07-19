@@ -15,4 +15,3 @@ class Command(BaseCommand):
         ).all().delete()
         models.Keyword.objects.exclude(works__isnull=False).all().delete()
         models.Appellation.objects.exclude(asserted_by__isnull=False).all().delete()
-
