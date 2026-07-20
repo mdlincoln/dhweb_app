@@ -144,6 +144,20 @@ python manage.py <command>
 - Regenerate the test fixture after model/data changes: `make wipe && make dumptest`.
 - Load testing uses Locust (`locust/locustfile.py`); it requires `data/all_ids.json`,
   produced by `python manage.py dump_ids`.
+- **Pre-existing test failures:** As of the uv migration (July 2026), the test suite has
+  5 known failures that are **not** caused by the migration — they fail identically on the
+  old `requirements.txt`-based environment as well:
+  - `CreateConferenceViewTest.test_post` — POST to `conference_create` returns a response
+    without the expected "created" success message (form validation issue).
+  - `EditConferenceViewTest.test_post` — same pattern; expects "updated" message.
+  - `CreateOrganizerViewTest.test_post` — same pattern; expects "created" message.
+  - `CreateWorkTest.test_post` — same pattern; expects "created" message.
+  - `DownloadPageTest.test_render` — `FileNotFoundError: '/vol/data/dh_conferences_works.zip'`;
+    the download page view expects a pre-generated zip file that does not exist in the test
+    environment.
+  
+  When these failures are investigated and fixed, **update this section of AGENTS.md** to
+  reflect the current test state.
 
 ## Domain Model
 
