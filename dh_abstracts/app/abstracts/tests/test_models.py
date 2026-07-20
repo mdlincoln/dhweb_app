@@ -1,26 +1,12 @@
 from django.test import TestCase
 
 from abstracts.models import (
-    Organizer,
-    ConferenceSeries,
     Conference,
-    SeriesMembership,
     Work,
     Institution,
     Appellation,
-    Author,
-    Authorship,
-    Keyword,
     Language,
-    Topic,
     Affiliation,
-    Country,
-    CountryLabel,
-    WorkType,
-    FileImport,
-    FileImportMessgaes,
-    FileImportTries,
-    License,
 )
 from lxml.etree import XMLSyntaxError, DocumentInvalid
 

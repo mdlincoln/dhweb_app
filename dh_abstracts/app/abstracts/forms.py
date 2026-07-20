@@ -1,13 +1,9 @@
 from django import forms
 from dal import forward
 from dal.autocomplete import ModelSelect2, ModelSelect2Multiple
-from django.forms import formset_factory, inlineformset_factory, modelformset_factory
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, ButtonHolder, Submit
 
 from .models import (
     Author,
-    Authorship,
     Conference,
     Institution,
     Topic,
@@ -18,7 +14,6 @@ from .models import (
     Language,
     License,
     Affiliation,
-    SeriesMembership,
     ConferenceSeries,
     Organizer,
 )
@@ -499,7 +494,7 @@ class ConferenceCheckoutForm(forms.Form):
 
 def get_license_choices():
     return [("", "Do nothing"), ("clear", "Clear all licenses")] + [
-        (l.id, l.title) for l in License.objects.all()
+        (license_.id, license_.title) for license_ in License.objects.all()
     ]
 
 
@@ -556,6 +551,7 @@ class ConferenceForm(forms.ModelForm):
         cleaned_data = super().clean(*args, **kwargs)
         short_title = cleaned_data.get("short_title")
         theme_title = cleaned_data.get("theme_title")
+        city = cleaned_data.get("city")
         hosting_institutions = cleaned_data.get("hosting_institutions")
         if (
             short_title == ""

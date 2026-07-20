@@ -1,7 +1,5 @@
-import datetime
 from django.db import models, DatabaseError, transaction
 from django.db.models import Max, Count
-from django.utils import timezone
 from django.urls import reverse
 from django.contrib.sites.models import Site
 from django.contrib.redirects.models import Redirect
@@ -342,11 +340,11 @@ class Conference(models.Model):
         )
         for idx in range(n_authors):
             first_name = xml.xpath(
-                f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx+1}]/tei:persName/tei:forename/text()",
+                f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx + 1}]/tei:persName/tei:forename/text()",
                 namespaces=ns,
             )
             last_name = xml.xpath(
-                f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx+1}]/tei:persName/tei:surname/text()",
+                f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx + 1}]/tei:persName/tei:surname/text()",
                 namespaces=ns,
             )
 
@@ -376,14 +374,14 @@ class Conference(models.Model):
                 attempt.add_create_response(target_author)
 
             all_affiliations = xml.xpath(
-                f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx+1}]/tei:affiliation",
+                f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx + 1}]/tei:affiliation",
                 namespaces=ns,
             )
             final_affiliation_list = []
             for aff_idx in range(len(all_affiliations)):
                 # Get affiliation name if present
                 affiliation_name = xml.xpath(
-                    f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx+1}]/tei:affiliation[{aff_idx + 1}]/tei:orgName/tei:name[@type='sub']/text()",
+                    f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx + 1}]/tei:affiliation[{aff_idx + 1}]/tei:orgName/tei:name[@type='sub']/text()",
                     namespaces=ns,
                 )
 
@@ -394,7 +392,7 @@ class Conference(models.Model):
 
                 # Match institution if possible
                 institution_name = xml.xpath(
-                    f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx+1}]/tei:affiliation[{aff_idx + 1}]/tei:orgName/tei:name[@type='main']/text()",
+                    f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx + 1}]/tei:affiliation[{aff_idx + 1}]/tei:orgName/tei:name[@type='main']/text()",
                     namespaces=ns,
                 )
 
@@ -408,7 +406,7 @@ class Conference(models.Model):
                 if top_institution is None:
                     # Try to find country, then create the institution
                     city_name = xml.xpath(
-                        f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx+1}]/tei:affiliation[{aff_idx + 1}]/tei:district/text()",
+                        f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx + 1}]/tei:affiliation[{aff_idx + 1}]/tei:district/text()",
                         namespaces=ns,
                     )
                     if len(city_name) == 0:
@@ -417,7 +415,7 @@ class Conference(models.Model):
                         city_name = city_name[0]
 
                     country_name = xml.xpath(
-                        f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx+1}]/tei:affiliation[{aff_idx + 1}]/tei:country/text()",
+                        f"/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:author[{idx + 1}]/tei:affiliation[{aff_idx + 1}]/tei:country/text()",
                         namespaces=ns,
                     )
                     if len(country_name) == 0:
@@ -478,7 +476,7 @@ class ConferenceDocument(models.Model):
         try:
             return basename(self.document.file.name)
         except:
-            return f"File not found"
+            return "File not found"
 
     @property
     def url(self):
@@ -489,7 +487,7 @@ class ConferenceDocument(models.Model):
         try:
             return self.document.file.size
         except:
-            return f"File not found"
+            return "File not found"
 
 
 class Organizer(ChangeTrackedModel):
@@ -549,7 +547,7 @@ class Tag(models.Model):
 
         # Add the target tag to all the works with the origin tag
         # remove the origin tag
-        delete_results = self.delete()
+        self.delete()
         return results
 
     class Meta:
@@ -1118,7 +1116,7 @@ class Authorship(ChangeTrackedModel):
     def has_outdated_appellation(self):
         pref_attrs = self.author.most_recent_appellations.values_list("pk", flat=True)
         given_attrs = self.appellation.pk
-        return not given_attrs in pref_attrs
+        return given_attrs not in pref_attrs
 
     @property
     def has_outdated_affiliations(self):

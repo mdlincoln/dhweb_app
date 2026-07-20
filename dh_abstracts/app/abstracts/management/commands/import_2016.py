@@ -1,11 +1,8 @@
-from glob import glob
 from django.core.management.base import BaseCommand
 from abstracts import models
-import re
 import json
 from django.db import transaction
-from lxml import etree
-from django.contrib.postgres.search import SearchVector, SearchRank, SearchQuery
+from django.contrib.postgres.search import SearchRank, SearchQuery
 from django.db.models import F
 
 

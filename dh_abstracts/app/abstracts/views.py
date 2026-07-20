@@ -1,7 +1,6 @@
 from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse, StreamingHttpResponse, FileResponse
-from django.template import loader
-from django.shortcuts import get_object_or_404, render, redirect
+from django.http import HttpResponse, JsonResponse, FileResponse
+from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, ListView
 from django.db.models import (
@@ -17,30 +16,24 @@ from django.db.models import (
     FloatField,
     BooleanField,
 )
-from django.db.models.functions import Concat, FirstValue, Cast
-from django.core import management
-from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Cast
 from django.contrib.postgres.search import SearchRank, SearchQuery
 from django.contrib.postgres.aggregates import StringAgg
 from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from dal.autocomplete import Select2QuerySetView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from django.db import transaction, IntegrityError
 from django.forms.models import model_to_dict
-from django.forms import formset_factory, inlineformset_factory, modelformset_factory
+from django.forms import formset_factory
 from django.conf import settings
 from django.utils.html import format_html
 from django.views.decorators.cache import cache_page
-import glob
 from os.path import basename, getmtime
 from datetime import datetime
-import csv
-import sys
 from operator import attrgetter
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 import zipfile
@@ -61,7 +54,6 @@ from .models import (
     Keyword,
     Topic,
     Language,
-    CountryLabel,
     Authorship,
     License,
 )
@@ -267,7 +259,7 @@ class InstitutionAutocomplete(ItemLabelAutocomplete):
         else:
             c_label = ""
         location_statement = ", ".join(
-            [l for l in [item.state_province_region, c_label] if l != ""]
+            [part for part in [item.state_province_region, c_label] if part != ""]
         )
         return f"{item} ({item.n_works} works)<br><small text-class='muted'>{location_statement}</small>"
 
@@ -301,7 +293,11 @@ class AffiliationAutocomplete(ItemLabelAutocomplete):
         else:
             c_label = ""
         location_statement = ", ".join(
-            [l for l in [item.institution.state_province_region, c_label] if l != ""]
+            [
+                part
+                for part in [item.institution.state_province_region, c_label]
+                if part != ""
+            ]
         )
         return f"{item} ({item.n_works} works)<br><small text-class='muted'>{location_statement}</small>"
 
@@ -886,7 +882,7 @@ def author_merge_view(request, author_id):
                 """
                 messages.error(
                     request,
-                    f"You cannot merge an author into themselves. Please select a different author.",
+                    "You cannot merge an author into themselves. Please select a different author.",
                 )
                 return redirect("author_merge", author_id=author_id)
             else:
@@ -1591,7 +1587,7 @@ def institution_merge(request, institution_id):
                 """
                 messages.error(
                     request,
-                    f"You cannot merge an institution into itself. Please select a different institution.",
+                    "You cannot merge an institution into itself. Please select a different institution.",
                 )
                 return redirect("institution_merge", institution_id=institution_id)
             else:
@@ -1717,7 +1713,7 @@ def affiliation_merge(request, affiliation_id):
                 """
                 messages.error(
                     request,
-                    f"You cannot merge an affiliation into itself. Please select a different affiliation.",
+                    "You cannot merge an affiliation into itself. Please select a different affiliation.",
                 )
                 return redirect("affiliation_merge", affiliation_id=affiliation_id)
             else:
@@ -1975,7 +1971,7 @@ class ConferenceXMLLoad(StaffRequiredMixin, DetailView):
                             request, f"{basename(err['filepath'])}: {err['error']}"
                         )
                     if n_failed == 0:
-                        messages.success(request, f"All files imported successfully.")
+                        messages.success(request, "All files imported successfully.")
                     else:
                         messages.info(
                             request,
@@ -2228,7 +2224,6 @@ def keyword_merge(request, keyword_id):
     keyword = get_object_or_404(Keyword, pk=keyword_id)
     affected_works = Work.objects.filter(keywords=keyword).all()
     sample_works = affected_works[:15]
-    count_elements = affected_works.count() - 15
     context = {
         "merging": keyword,
         "tag_merge_form": KeywordMergeForm,
@@ -2258,7 +2253,7 @@ def keyword_merge(request, keyword_id):
                 """
                 messages.error(
                     request,
-                    f"You cannot merge a keyword into itself. Please select a different keyword.",
+                    "You cannot merge a keyword into itself. Please select a different keyword.",
                 )
                 return redirect("keyword_merge", keyword_id=keyword_id)
             else:
@@ -2430,7 +2425,7 @@ def topic_merge(request, topic_id):
                 """
                 messages.error(
                     request,
-                    f"You cannot merge a topic into itself. Please select a different topic.",
+                    "You cannot merge a topic into itself. Please select a different topic.",
                 )
                 return redirect("topic_merge", topic_id=topic_id)
             else:
@@ -2605,7 +2600,7 @@ def language_merge(request, language_id):
                 """
                 messages.error(
                     request,
-                    f"You cannot merge a language into itself. Please select a different language.",
+                    "You cannot merge a language into itself. Please select a different language.",
                 )
                 return redirect("language_merge", language_id=language_id)
             else:
@@ -2744,7 +2739,7 @@ def work_type_merge(request, work_type_id):
                 """
                 messages.error(
                     request,
-                    f"You cannot merge a work_type into itself. Please select a different work_type.",
+                    "You cannot merge a work_type into itself. Please select a different work_type.",
                 )
                 return redirect("work_type_merge", work_type_id=work_type_id)
             else:

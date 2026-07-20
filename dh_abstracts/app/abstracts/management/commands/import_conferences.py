@@ -1,7 +1,5 @@
-from glob import glob
 from django.core.management.base import BaseCommand
 from abstracts import models
-import re
 import csv
 import datetime
 from django.db import transaction
@@ -104,7 +102,7 @@ class Command(BaseCommand):
                         if series.title == "":
                             series.title = split_series[0]
                             series.save()
-                        membership = models.SeriesMembership.objects.create(
+                        models.SeriesMembership.objects.create(
                             conference=conference,
                             series=series,
                             number=int(split_series[1]),

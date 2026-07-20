@@ -1,6 +1,5 @@
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.urls import reverse
-from django.contrib.auth.models import User
 from django.core.cache import cache
 import json
 
@@ -8,10 +7,8 @@ from abstracts.models import (
     Organizer,
     ConferenceSeries,
     Conference,
-    SeriesMembership,
     Work,
     Institution,
-    Appellation,
     Author,
     Authorship,
     Keyword,
@@ -19,12 +16,7 @@ from abstracts.models import (
     Topic,
     Affiliation,
     Country,
-    CountryLabel,
     WorkType,
-    FileImport,
-    FileImportMessgaes,
-    FileImportTries,
-    License,
 )
 
 from abstracts.forms import WorkFilter
@@ -881,7 +873,7 @@ class DeleteWorkViewTest(CachelessTestCase):
 
     @as_auth
     def test_post(self):
-        res = self.client.post(reverse("work_delete", kwargs={"pk": 1}), follow=True)
+        self.client.post(reverse("work_delete", kwargs={"pk": 1}), follow=True)
         self.assertFalse(Work.objects.filter(pk=1).exists())
 
 
@@ -991,7 +983,7 @@ class DeleteKeywordViewTest(CachelessTestCase):
 
     @as_auth
     def test_post(self):
-        res = self.client.post(reverse("keyword_delete", kwargs={"pk": 1}), follow=True)
+        self.client.post(reverse("keyword_delete", kwargs={"pk": 1}), follow=True)
         self.assertFalse(Keyword.objects.filter(pk=1).exists())
 
 
@@ -1122,7 +1114,7 @@ class DeleteTopicViewTest(CachelessTestCase):
 
     @as_auth
     def test_post(self):
-        res = self.client.post(reverse("topic_delete", kwargs={"pk": 1}), follow=True)
+        self.client.post(reverse("topic_delete", kwargs={"pk": 1}), follow=True)
         self.assertFalse(Topic.objects.filter(pk=1).exists())
 
 
@@ -1226,9 +1218,7 @@ class DeleteLanguageViewTest(CachelessTestCase):
 
     @as_auth
     def test_post(self):
-        res = self.client.post(
-            reverse("language_delete", kwargs={"pk": 1}), follow=True
-        )
+        self.client.post(reverse("language_delete", kwargs={"pk": 1}), follow=True)
         self.assertFalse(Language.objects.filter(pk=1).exists())
 
 
@@ -1351,9 +1341,7 @@ class DeleteWorkTypeViewTest(CachelessTestCase):
 
     @as_auth
     def test_post(self):
-        res = self.client.post(
-            reverse("work_type_delete", kwargs={"pk": 1}), follow=True
-        )
+        self.client.post(reverse("work_type_delete", kwargs={"pk": 1}), follow=True)
         self.assertFalse(WorkType.objects.filter(pk=1).exists())
 
 

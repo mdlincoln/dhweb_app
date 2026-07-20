@@ -1,7 +1,5 @@
 from django.urls import include, path
 import debug_toolbar
-import django.contrib.auth.views as auth_views
-from django.conf import settings
 from . import views
 
 urlpatterns = [
@@ -305,7 +303,7 @@ urlpatterns = [
         name="public_all_tables_download",
     ),
     path(
-        f"downloads/private",
+        "downloads/private",
         views.private_download_all_tables,
         name="private_all_tables_download",
     ),

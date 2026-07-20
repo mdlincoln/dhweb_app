@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
 from abstracts import models
-import re
 import csv
 from django.db import transaction
 

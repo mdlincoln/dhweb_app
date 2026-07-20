@@ -1,32 +1,6 @@
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.urls import reverse
-from django.contrib.auth.models import User
 import json
-
-from abstracts.models import (
-    Organizer,
-    ConferenceSeries,
-    Conference,
-    SeriesMembership,
-    Work,
-    Institution,
-    Appellation,
-    Author,
-    Authorship,
-    Keyword,
-    Language,
-    Topic,
-    Affiliation,
-    Country,
-    CountryLabel,
-    WorkType,
-    FileImport,
-    FileImportMessgaes,
-    FileImportTries,
-    License,
-)
-
-from abstracts.forms import WorkFilter
 
 
 def is_list_unique(x):

@@ -78,7 +78,7 @@ class QuickstartUser(HttpUser):
 
     @task(4)
     def author_autocomplete(self):
-        self.client.get(f"/author-autocomplete", name="/author-autocomplete")
+        self.client.get("/author-autocomplete", name="/author-autocomplete")
 
     @task(4)
     def author_autocomplete_q(self):
@@ -89,7 +89,7 @@ class QuickstartUser(HttpUser):
 
     @task(4)
     def affiliation_autocomplete(self):
-        self.client.get(f"/affiliation-autocomplete", name="/affiliation-autocomplete")
+        self.client.get("/affiliation-autocomplete", name="/affiliation-autocomplete")
 
     @task(4)
     def affiliation_autocomplete_q(self):
@@ -100,7 +100,7 @@ class QuickstartUser(HttpUser):
 
     @task(4)
     def institution_autocomplete(self):
-        self.client.get(f"/institution-autocomplete", name="/institution-autocomplete")
+        self.client.get("/institution-autocomplete", name="/institution-autocomplete")
 
     @task(4)
     def institution_autocomplete_q(self):
