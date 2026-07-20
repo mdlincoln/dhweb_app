@@ -12,7 +12,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /vol/dh
 
 # Install dependencies from the lockfile (cached layer; rebuilt only when lock changes).
-# --frozen: refuse to update uv.lock; --no-dev: exclude black/flake8 (never in the container).
+# --frozen: refuse to update uv.lock; --no-dev: exclude ruff (never in the container).
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 

@@ -47,3 +47,7 @@ nightly:
 	docker-compose exec app python manage.py export_all_csv
 check:
 	docker-compose exec app python manage.py check
+lint:
+	cd dh_abstracts && uv run ruff check --config pyproject.toml ..
+format:
+	cd dh_abstracts && uv run ruff format --config pyproject.toml ..

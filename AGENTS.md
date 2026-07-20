@@ -34,10 +34,10 @@ Key Python dependencies (declared in `dh_abstracts/pyproject.toml`, locked in `d
 - `psycopg2-binary` — PostgreSQL driver
 - `easy-thumbnails` — image thumbnails
 
-Dev tooling: `black` (formatting), `flake8` (linting), `coverage` + `django-coverage-plugin`.
-Note that `black` and `flake8` are in `[dependency-groups] dev` in `pyproject.toml` and
-are excluded from the Docker image via `uv sync --no-dev` — they are not installed inside
-the Docker container and must be run on the host or a separate dev environment. `coverage`
+Dev tooling: `ruff` (formatting + linting), `coverage` + `django-coverage-plugin`.
+Note that `ruff` is in `[dependency-groups] dev` in `pyproject.toml` and is excluded
+from the Docker image via `uv sync --no-dev` — it is not installed inside the Docker
+container and must be run on the host or a separate dev environment. `coverage`
 and `django-coverage-plugin` are in `pyproject.toml` dependencies and available in-container.
 
 ## Repository Layout
@@ -208,10 +208,13 @@ Keyword, Topic, etc.). These are invoked from the editor views.
 - **`DEFAULT_AUTO_FIELD`** is `AutoField` (not `BigAutoField`). New models should follow
   this unless a migration explicitly changes it.
 - **Time zone:** `America/New_York`.
-- **Code style:** Format with `black` (default line length 88). Lint with `flake8`.
-  black and flake8 are dev dependencies excluded from the Docker image via `uv sync --no-dev`.
-  Run them on the **host** via `uv run black .` / `uv run flake8 .` after running `uv sync`
-  locally (without `--no-dev`). Do NOT run these inside the Docker container.
+- **Code style:** Format and lint with `ruff`. Line length is 88 (ruff formatter is
+  black-compatible). ruff is a dev dependency excluded from the Docker image via
+  `uv sync --no-dev`. Run it on the **host** via `uv run ruff format .` /
+  `uv run ruff check .` (or `make format` / `make lint`) after running `uv sync`
+  locally (without `--no-dev`). Do NOT run these inside the Docker container. A
+  pre-commit hook (`.pre-commit-config.yaml`) enforces both formatting and linting on
+  commit; run `pre-commit install` once after cloning.
 - **Debug toolbar:** `django-debug-toolbar` is wired into `INSTALLED_APPS`,
   `MIDDLEWARE`, and routed at `__debug__/` (visible only when `DEBUG=True`).
 - **Django contrib apps in use** (beyond the standard admin/auth/sessions/contenttypes/
@@ -232,18 +235,18 @@ Keyword, Topic, etc.). These are invoked from the editor views.
 Dependencies are managed with [uv](https://docs.astral.sh/uv/):
 
 - **Declaration:** Direct dependencies are declared in `dh_abstracts/pyproject.toml` using
-  the PEP 621 `[project]` table. Dev dependencies (`black`, `flake8`) are in the
+  the PEP 621 `[project]` table. Dev dependencies (`ruff`) are in the
   `[dependency-groups] dev` table.
 - **Lockfile:** `dh_abstracts/uv.lock` is the single source of truth for resolved versions.
   Regenerate after changing `pyproject.toml` with `uv lock` (run from `dh_abstracts/`).
 - **Adding a dependency:** `uv add <package>` (updates `pyproject.toml` and `uv.lock`).
   For a dev dependency: `uv add --dev <package>`.
 - **Docker install:** The Dockerfile runs `uv sync --frozen --no-dev` from `uv.lock`.
-  `--frozen` refuses to update the lockfile; `--no-dev` excludes `black`/`flake8` from the
+  `--frozen` refuses to update the lockfile; `--no-dev` excludes `ruff` from the
   image. The venv is placed at `/opt/venv` (outside the dev volume mount) and added to
   `PATH`, so `python` and `gunicorn` resolve to it transparently.
 - **Local dev sync:** Run `uv sync` (without `--no-dev`) on the host to install all deps
-  including dev tools, then use `uv run black .` / `uv run flake8 .` to run them.
+  including dev tools, then use `uv run ruff format .` / `uv run ruff check .` to run them.
 
 ## Management Commands
 

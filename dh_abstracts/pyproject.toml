@@ -27,9 +27,37 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black>=22.3.0,<23.0.0",
-    "flake8>=4.0.1,<5.0.0",
+    "ruff==0.15.22",
 ]
 
 [tool.uv]
 package = false
+
+[tool.ruff]
+line-length = 88
+extend-exclude = [
+    "migrations",
+    "app/dhweb/settings.py",
+]
+
+[tool.ruff.lint]
+# Approximate flake8's default rule set: pyflakes (F) + pycodestyle (E, W).
+# Note: this is an approximation, not a byte-identical reproduction. flake8 has a
+# built-in default-ignore list (E121, E123, E126, E226, E24, E704, W503, W504).
+# ruff does not replicate that list; instead it omits the formatter-conflicting
+# rules entirely (W503/W504 and E704 are not implemented in ruff as of 0.15.x),
+# so there is nothing to re-ignore here. The remaining flake8-ignored codes
+# (E121, E123, E126, E226, E24) are likewise not implemented as distinct rules
+# in this ruff version. The Phase 3 diff review is the real check for any
+# unexpected rule changes.
+select = ["E", "F", "W"]
+# E501 (line too long) and E722 (bare except) are ignored repo-wide: the project
+# never had a `.flake8` config, so neither was ever enforced, and the existing
+# source has 113 long lines (largely user-facing string literals) and 16 bare
+# excepts. Ignoring them here keeps this change a pure tooling swap; tightening
+# these is a possible future hardening pass. All other E/F/W rules remain active
+# and are enforced by the pre-commit hook on new code.
+ignore = ["E501", "E722"]
+
+[tool.ruff.format]
+# Ruff's default style is black-compatible. No overrides needed.
