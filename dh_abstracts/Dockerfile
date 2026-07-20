@@ -1,54 +1,23 @@
-FROM public.ecr.aws/docker/library/python:3.10.5-buster
+FROM python:3.9.13
 
-# update the packages
-RUN apt-get -y update && apt-get -y upgrade && apt-get -y install nginx vim
+# Install uv (pinned to a specific stable version for reproducibility)
+COPY --from=ghcr.io/astral-sh/uv:0.11.29 /uv /uvx /bin/
 
-# remove default nginx site
-RUN rm /etc/nginx/sites-enabled/default
+# Place the venv outside /vol/dh so it is not shadowed by the dev volume mount.
+# PATH ensures `python` and `gunicorn` resolve to the venv automatically,
+# so all existing Makefile targets (which call `python manage.py`) work unchanged.
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# set the timezone appropriatly
-ENV TZ=UTC
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+WORKDIR /vol/dh
 
-# install the application requirements
-COPY dh_abstracts/requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+# Install dependencies from the lockfile (cached layer; rebuilt only when lock changes).
+# --frozen: refuse to update uv.lock; --no-dev: exclude black/flake8 (never in the container).
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
-# Specify home 
-ENV APP_HOME /dh-abstracts
-WORKDIR $APP_HOME
+# Copy application source
+ADD . /vol/dh
+WORKDIR /vol/dh/app
 
-# install the application
-ADD dh_abstracts/app $APP_HOME
-
-# generate the static content
-ENV POSTGRES_HOST=unimportant \
-    POSTGRES_DB=unimportant \
-    POSTGRES_USER=unimportant \
-    POSTGRES_PASSWORD=unimportant \
-    DH_SECRET=unimportant \
-    DATA_OUTPUT_PATH=unimportant \
-    STATIC_ASSETS_PATH=/dh-abstracts/abstracts/static
-RUN $APP_HOME/manage.py collectstatic --noinput
-
-# create necessary directories
-RUN mkdir -p $APP_HOME/scripts $APP_HOME/data
-
-# Define port and startup script
-EXPOSE 80
-CMD scripts/entry.ksh
-
-# Move in other assets
-COPY package/scripts/entry.ksh $APP_HOME/scripts/entry.ksh
-COPY package/scripts/export.ksh $APP_HOME/scripts/export.ksh
-COPY package/scripts/migrate.ksh $APP_HOME/scripts/migrate.ksh
-COPY package/data/container_bash_profile /root/.profile
-COPY package/data/default.conf /etc/nginx/conf.d
-
-# Add the build tag
-ARG BUILD_TAG
-RUN test -n "$BUILD_TAG" && touch $APP_HOME/buildtag.build-$BUILD_TAG || touch $APP_HOME/buildtag.build-0
-
-#
-# end of file
-#
+EXPOSE 8000

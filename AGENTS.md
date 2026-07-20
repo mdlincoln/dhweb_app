@@ -15,14 +15,14 @@ dSHARP-CMU / cmu-lib GitHub organizations.
 
 | Component      | Version   | Notes                                                            |
 | -------------- | --------- | ---------------------------------------------------------------- |
-| Python         | 3.9.13    | Pinned in `dh_abstracts/Dockerfile`                              |
+| Python         | 3.9.13    | Pinned in `dh_abstracts/Dockerfile`; deps managed by uv          |
 | Django         | 3.2.14    | LTS release                                                      |
 | PostgreSQL     | 12.11     | **Required** — uses `contrib.postgres` full-text search fields  |
 | Memcached      | 1.6.15    | Cache backend, 10-minute default timeout                         |
 | nginx          | 1.22.0    | Reverse proxy + static file serving                             |
 | gunicorn       | 20.1.0    | Production WSGI server (via `SERVE_COMMAND` env var)             |
 
-Key Python dependencies (see `dh_abstracts/requirements.txt`):
+Key Python dependencies (declared in `dh_abstracts/pyproject.toml`, locked in `dh_abstracts/uv.lock`):
 
 - `django-autocomplete-light` (dal) — autocomplete widgets throughout forms/views
 - `django-crispy-forms` (bootstrap4 template pack) — form rendering
@@ -35,10 +35,10 @@ Key Python dependencies (see `dh_abstracts/requirements.txt`):
 - `easy-thumbnails` — image thumbnails
 
 Dev tooling: `black` (formatting), `flake8` (linting), `coverage` + `django-coverage-plugin`.
-Note that `black` and `flake8` are declared only in `pyproject.toml` dev-dependencies and
-are **not** in `requirements.txt` — they are not installed inside the Docker container and
-must be run on the host or a separate dev environment. `coverage` and `django-coverage-plugin`
-are in `requirements.txt` and available in-container.
+Note that `black` and `flake8` are in `[dependency-groups] dev` in `pyproject.toml` and
+are excluded from the Docker image via `uv sync --no-dev` — they are not installed inside
+the Docker container and must be run on the host or a separate dev environment. `coverage`
+and `django-coverage-plugin` are in `pyproject.toml` dependencies and available in-container.
 
 ## Repository Layout
 
@@ -52,8 +52,8 @@ are in `requirements.txt` and available in-container.
 ├── locust/                     # Load testing (locustfile.py)
 └── dh_abstracts/               # Django project
     ├── Dockerfile
-    ├── requirements.txt        # Pinned; generated from pyproject.toml (poetry)
-    ├── pyproject.toml          # Poetry dependency spec
+    ├── uv.lock                # Locked dependency manifest (uv)
+    ├── pyproject.toml         # PEP 621 dependency spec (uv)
     └── app/                    # Django project root (manage.py lives here)
         ├── manage.py
         ├── dhweb/              # Django project package
@@ -195,6 +195,9 @@ Keyword, Topic, etc.). These are invoked from the editor views.
   this unless a migration explicitly changes it.
 - **Time zone:** `America/New_York`.
 - **Code style:** Format with `black` (default line length 88). Lint with `flake8`.
+  black and flake8 are dev dependencies excluded from the Docker image via `uv sync --no-dev`.
+  Run them on the **host** via `uv run black .` / `uv run flake8 .` after running `uv sync`
+  locally (without `--no-dev`). Do NOT run these inside the Docker container.
 - **Debug toolbar:** `django-debug-toolbar` is wired into `INSTALLED_APPS`,
   `MIDDLEWARE`, and routed at `__debug__/` (visible only when `DEBUG=True`).
 - **Django contrib apps in use** (beyond the standard admin/auth/sessions/contenttypes/
@@ -209,6 +212,24 @@ Keyword, Topic, etc.). These are invoked from the editor views.
 - **Other config:** `LOGIN_URL = "/accounts/login"` (login URL for staff-gated editor
   routes). `DATA_OUTPUT_PATH = "/vol/data"` (in-container path where CSV exports are
   written).
+
+## Dependency Management
+
+Dependencies are managed with [uv](https://docs.astral.sh/uv/):
+
+- **Declaration:** Direct dependencies are declared in `dh_abstracts/pyproject.toml` using
+  the PEP 621 `[project]` table. Dev dependencies (`black`, `flake8`) are in the
+  `[dependency-groups] dev` table.
+- **Lockfile:** `dh_abstracts/uv.lock` is the single source of truth for resolved versions.
+  Regenerate after changing `pyproject.toml` with `uv lock` (run from `dh_abstracts/`).
+- **Adding a dependency:** `uv add <package>` (updates `pyproject.toml` and `uv.lock`).
+  For a dev dependency: `uv add --dev <package>`.
+- **Docker install:** The Dockerfile runs `uv sync --frozen --no-dev` from `uv.lock`.
+  `--frozen` refuses to update the lockfile; `--no-dev` excludes `black`/`flake8` from the
+  image. The venv is placed at `/opt/venv` (outside the dev volume mount) and added to
+  `PATH`, so `python` and `gunicorn` resolve to it transparently.
+- **Local dev sync:** Run `uv sync` (without `--no-dev`) on the host to install all deps
+  including dev tools, then use `uv run black .` / `uv run flake8 .` to run them.
 
 ## Management Commands
 
