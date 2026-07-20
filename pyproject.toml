@@ -37,7 +37,7 @@ package = false
 line-length = 88
 extend-exclude = [
     "migrations",
-    "app/dhweb/settings.py",
+    "dh_abstracts/dhweb/settings.py",
 ]
 
 [tool.ruff.lint]

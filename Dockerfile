@@ -16,8 +16,7 @@ WORKDIR /vol/dh
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
-# Copy application source
-ADD . /vol/dh
-WORKDIR /vol/dh/app
+# Copy Django project source
+COPY dh_abstracts/ /vol/dh/
 
 EXPOSE 8000

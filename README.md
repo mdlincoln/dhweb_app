@@ -24,7 +24,7 @@ The Django app relies on several [PostgreSQL-only functions and fields](https://
 
 ### django
 
-This is the core Django service, which builds from `/dh_abstracts/Dockerfile`. The python libraries are specified in `/dh_abstracts/pyproject.toml` and locked in `/dh_abstracts/uv.lock`, installed via `uv sync` when the Dockerfile is built.
+This is the core Django service, which builds from `/Dockerfile`. The python libraries are specified in `/pyproject.toml` and locked in `/uv.lock`, installed via `uv sync` when the Dockerfile is built.
 
 ## Deployment
 
@@ -36,6 +36,6 @@ In production we currently use gunicorn to serve, so the `SERVE_COMMAND` is set 
 
 Update nginx, memcached, and postgres versions by incrementing their version tags in `docker-compose.yml`
 
-Update underlying Python version in `dh_abstracts/Dockerfile`
+Update underlying Python version in `Dockerfile`
 
-Update python packages in `pyproject.toml` and regenerate the lockfile with `uv lock` (run from `dh_abstracts/`).
+Update python packages in `pyproject.toml` and regenerate the lockfile with `uv lock` (run from repo root).

@@ -15,14 +15,14 @@ dSHARP-CMU / cmu-lib GitHub organizations.
 
 | Component      | Version   | Notes                                                            |
 | -------------- | --------- | ---------------------------------------------------------------- |
-| Python         | 3.9.13    | Pinned in `dh_abstracts/Dockerfile`; deps managed by uv          |
+| Python         | 3.9.13    | Pinned in `Dockerfile`; deps managed by uv                        |
 | Django         | 3.2.14    | LTS release                                                      |
 | PostgreSQL     | 12.11     | **Required** — uses `contrib.postgres` full-text search fields  |
 | Memcached      | 1.6.15    | Cache backend, 10-minute default timeout                         |
 | nginx          | 1.22.0    | Reverse proxy + static file serving                             |
 | gunicorn       | 20.1.0    | Production WSGI server (via `SERVE_COMMAND` env var)             |
 
-Key Python dependencies (declared in `dh_abstracts/pyproject.toml`, locked in `dh_abstracts/uv.lock`):
+Key Python dependencies (declared in `pyproject.toml`, locked in `uv.lock`):
 
 - `django-autocomplete-light` (dal) — autocomplete widgets throughout forms/views
 - `django-crispy-forms` (bootstrap4 template pack) — form rendering
@@ -45,34 +45,35 @@ and `django-coverage-plugin` are in `pyproject.toml` dependencies and available 
 ```
 .
 ├── docker-compose.yml          # Orchestrates postgres, app, memcached, nginx
+├── Dockerfile                  # App image build (uv-based)
+├── pyproject.toml              # PEP 621 dependency spec (uv)
+├── uv.lock                     # Locked dependency manifest (uv)
+├── .dockerignore               # Docker build context exclusions
 ├── Makefile                    # All common dev/deploy operations
 ├── .env.template               # Copy to .env and fill in secrets
 ├── nginx/                      # nginx conf.d templates (mounted into container)
 ├── data/                       # DB backups, exports, locust ID dumps (gitignored)
 ├── locust/                     # Load testing (locustfile.py)
 └── dh_abstracts/               # Django project
-    ├── Dockerfile
-    ├── uv.lock                # Locked dependency manifest (uv)
-    ├── pyproject.toml         # PEP 621 dependency spec (uv)
-    └── app/                    # Django project root (manage.py lives here)
-        ├── manage.py
-        ├── dhweb/              # Django project package
-        │   ├── settings.py
-        │   ├── urls.py         # Root URL conf (admin, accounts, filer, sitemaps)
-        │   └── wsgi.py
-        └── abstracts/          # The single application
-            ├── models.py       # Domain models (~1200 lines)
-            ├── views.py        # Views (~2765 lines)
-            ├── forms.py
-            ├── admin.py
-            ├── urls.py         # App URL conf (all app routes)
-            ├── apps.py
-            ├── migrations/     # 76 migrations
-            ├── management/commands/  # Data import/export/maintenance scripts
-            ├── templatetags/
-            ├── tests/          # test_models.py, test_views.py, test_views_autocomplete.py
-            ├── static/tei/     # TEI XML test fixtures (valid_tei/, invalid_tei/)
-            └── fixtures/test.json
+    ├── manage.py
+    ├── .coveragerc             # coverage.py config
+    ├── dhweb/                  # Django project package
+    │   ├── settings.py
+    │   ├── urls.py             # Root URL conf (admin, accounts, filer, sitemaps)
+    │   └── wsgi.py
+    └── abstracts/              # The single application
+        ├── models.py           # Domain models (~1200 lines)
+        ├── views.py            # Views (~2765 lines)
+        ├── forms.py
+        ├── admin.py
+        ├── urls.py             # App URL conf (all app routes)
+        ├── apps.py
+        ├── migrations/         # 76 migrations
+        ├── management/commands/  # Data import/export/maintenance scripts
+        ├── templatetags/
+        ├── tests/              # test_models.py, test_views.py, test_views_autocomplete.py
+        ├── static/tei/         # TEI XML test fixtures (valid_tei/, invalid_tei/)
+        └── fixtures/test.json
 ```
 
 ## Setup & Running
@@ -136,7 +137,7 @@ python manage.py <command>
 
 ## Testing
 
-- Tests live in `dh_abstracts/app/abstracts/tests/`.
+- Tests live in `dh_abstracts/abstracts/tests/`.
 - Test classes use `fixtures = ["test.json"]` (generated via `make dumptest`).
 - `CachelessTestCase` (in `test_views.py`) clears memcached before each test — use it
   for view tests that depend on cache state.
@@ -234,11 +235,11 @@ Keyword, Topic, etc.). These are invoked from the editor views.
 
 Dependencies are managed with [uv](https://docs.astral.sh/uv/):
 
-- **Declaration:** Direct dependencies are declared in `dh_abstracts/pyproject.toml` using
+- **Declaration:** Direct dependencies are declared in `pyproject.toml` using
   the PEP 621 `[project]` table. Dev dependencies (`ruff`) are in the
   `[dependency-groups] dev` table.
-- **Lockfile:** `dh_abstracts/uv.lock` is the single source of truth for resolved versions.
-  Regenerate after changing `pyproject.toml` with `uv lock` (run from `dh_abstracts/`).
+- **Lockfile:** `uv.lock` is the single source of truth for resolved versions.
+  Regenerate after changing `pyproject.toml` with `uv lock` (run from repo root).
 - **Adding a dependency:** `uv add <package>` (updates `pyproject.toml` and `uv.lock`).
   For a dev dependency: `uv add --dev <package>`.
 - **Docker install:** The Dockerfile runs `uv sync --frozen --no-dev` from `uv.lock`.

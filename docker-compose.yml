@@ -10,7 +10,7 @@ services:
     env_file: .env
 
   app:
-    build: dh_abstracts
+    build: .
     restart: always
     command: "${SERVE_COMMAND}"
     volumes:

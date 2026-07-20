@@ -48,6 +48,6 @@ nightly:
 check:
 	docker-compose exec app python manage.py check
 lint:
-	cd dh_abstracts && uv run ruff check --config pyproject.toml ..
+	uv run ruff check .
 format:
-	cd dh_abstracts && uv run ruff format --config pyproject.toml ..
+	uv run ruff format .
