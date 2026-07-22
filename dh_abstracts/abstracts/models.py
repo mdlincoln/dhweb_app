@@ -970,12 +970,15 @@ class Author(ChangeTrackedModel):
             return f"{self.pk} - anonymous author"
 
     def save(self, *args, **kwargs):
-        all_appellations = (
-            Appellation.objects.filter(asserted_by__author=self)
-            .values_list("first_name", "last_name")
-            .distinct()
-        )
-        self.appellations_index = " ".join([f"{a[0]} {a[1]}" for a in all_appellations])
+        if self.pk:
+            all_appellations = (
+                Appellation.objects.filter(asserted_by__author=self)
+                .values_list("first_name", "last_name")
+                .distinct()
+            )
+            self.appellations_index = " ".join(
+                [f"{a[0]} {a[1]}" for a in all_appellations]
+            )
         super().save(*args, **kwargs)
 
     class Meta:

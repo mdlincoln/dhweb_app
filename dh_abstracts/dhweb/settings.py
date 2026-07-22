@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django.contrib.redirects",
     "django.contrib.sitemaps",
     "crispy_forms",
+    "crispy_bootstrap4",
     "django.contrib.humanize",
     "easy_thumbnails",
     "filer",
@@ -58,6 +59,7 @@ INSTALLED_APPS = [
 ]
 
 CRISPY_TEMPLATE_PACK = "bootstrap4"
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -108,7 +110,7 @@ WSGI_APPLICATION = "dhweb.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ["POSTGRES_DB"],
         "USER": os.environ["POSTGRES_USER"],
         "PASSWORD": os.environ["POSTGRES_PASSWORD"],
@@ -120,8 +122,8 @@ DATABASES = {
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
-        "LOCATION": "/tmp",
+        "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
+        "LOCATION": "memcached:11211",
         "TIMEOUT": 60 * 10,
     }
 }
@@ -150,8 +152,6 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "America/New_York"
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = True
 

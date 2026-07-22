@@ -1178,9 +1178,8 @@ class WorkDelete(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     extra_context = {"cancel_view": "work_list"}
     success_url = reverse_lazy("work_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, f"'{self.get_object().title}' deleted")
-        return super().delete(request, *args, **kwargs)
+    def get_success_message(self, cleaned_data):
+        return f"'{self.object.title}' deleted"
 
 
 class FullWorkList(ListView):
@@ -1921,10 +1920,6 @@ class ConferenceDelete(StaffRequiredMixin, SuccessMessageMixin, DeleteView):
     success_message = "Conference deleted"
     success_url = reverse_lazy("conference_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, self.success_message)
-        return super(ConferenceDelete, self).delete(request, *args, **kwargs)
-
 
 class ConferenceXMLLoad(StaffRequiredMixin, DetailView):
     model = Conference
@@ -2072,9 +2067,8 @@ class SeriesDelete(StaffRequiredMixin, SuccessMessageMixin, DeleteView):
     success_message = "Series '%(title)s' deleted"
     success_url = reverse_lazy("conference_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, self.success_message)
-        return super(SeriesDelete, self).delete(request, *args, **kwargs)
+    def get_success_message(self, cleaned_data):
+        return self.success_message % self.object.__dict__
 
 
 class OrganizerCreate(StaffRequiredMixin, SuccessMessageMixin, CreateView):
@@ -2123,9 +2117,8 @@ class OrganizerDelete(StaffRequiredMixin, SuccessMessageMixin, DeleteView):
     success_message = "Organizer %(name)s deleted."
     success_url = reverse_lazy("full_organizer_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, self.success_message)
-        return super(OrganizerDelete, self).delete(request, *args, **kwargs)
+    def get_success_message(self, cleaned_data):
+        return self.success_message % self.object.__dict__
 
 
 class OrganizerList(LoginRequiredMixin, ListView):
@@ -2150,9 +2143,8 @@ class KeywordDelete(StaffRequiredMixin, SuccessMessageMixin, DeleteView):
     success_message = "Keyword '%(title)s' deleted"
     success_url = reverse_lazy("full_keyword_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, self.success_message)
-        return super(KeywordDelete, self).delete(request, *args, **kwargs)
+    def get_success_message(self, cleaned_data):
+        return self.success_message % self.object.__dict__
 
 
 class KeywordEdit(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
@@ -2328,9 +2320,8 @@ class TopicDelete(StaffRequiredMixin, SuccessMessageMixin, DeleteView):
     success_message = "Topic '%(title)s' deleted"
     success_url = reverse_lazy("full_topic_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, self.success_message)
-        return super(TopicDelete, self).delete(request, *args, **kwargs)
+    def get_success_message(self, cleaned_data):
+        return self.success_message % self.object.__dict__
 
 
 class TopicEdit(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
@@ -2504,9 +2495,8 @@ class LanguageDelete(StaffRequiredMixin, SuccessMessageMixin, DeleteView):
     success_message = "Language '%(title)s' deleted"
     success_url = reverse_lazy("full_language_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, self.success_message)
-        return super(LanguageDelete, self).delete(request, *args, **kwargs)
+    def get_success_message(self, cleaned_data):
+        return self.success_message % self.object.__dict__
 
 
 class LanguageEdit(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
@@ -2643,9 +2633,8 @@ class WorkTypeDelete(StaffRequiredMixin, SuccessMessageMixin, DeleteView):
     success_message = "Abstract type '%(title)s' deleted"
     success_url = reverse_lazy("full_work_type_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, self.success_message)
-        return super(WorkTypeDelete, self).delete(request, *args, **kwargs)
+    def get_success_message(self, cleaned_data):
+        return self.success_message % self.object.__dict__
 
 
 class WorkTypeEdit(StaffRequiredMixin, SuccessMessageMixin, UpdateView):

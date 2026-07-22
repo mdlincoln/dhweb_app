@@ -356,7 +356,7 @@ class WorkListViewTest(CachelessTestCase):
     def test_search_text(self):
         res = self.client.get(reverse("work_list"), data={"text": "lorem ipsum"})
         all_titles = [w.title for w in res.context["work_list"]]
-        self.assertEquals("A Foo Too Far", all_titles[0])
+        self.assertEqual("A Foo Too Far", all_titles[0])
         self.assertTrue(is_list_unique([d.id for d in res.context["work_list"]]))
 
     def test_ft_available(self):
@@ -847,7 +847,7 @@ class EditOrganizerViewTest(CachelessTestCase):
             data={"title": "foo", "abbreviation": "bar", "notes": "buzz"},
             follow=True,
         )
-        self.assertEquals(res.status_code, 200)
+        self.assertEqual(res.status_code, 200)
 
 
 class DeleteOrganizerViewTest(CachelessTestCase):

@@ -1,4 +1,4 @@
-FROM python:3.9.13
+FROM python:3.12
 
 # Install uv (pinned to a specific stable version for reproducibility)
 COPY --from=ghcr.io/astral-sh/uv:0.11.29 /uv /uvx /bin/

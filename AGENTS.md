@@ -15,23 +15,24 @@ dSHARP-CMU / cmu-lib GitHub organizations.
 
 | Component      | Version   | Notes                                                            |
 | -------------- | --------- | ---------------------------------------------------------------- |
-| Python         | 3.9.13    | Pinned in `Dockerfile`; deps managed by uv                        |
-| Django         | 3.2.14    | LTS release                                                      |
-| PostgreSQL     | 12.11     | **Required** — uses `contrib.postgres` full-text search fields  |
-| Memcached      | 1.6.15    | Cache backend, 10-minute default timeout                         |
-| nginx          | 1.22.0    | Reverse proxy + static file serving                             |
-| gunicorn       | 20.1.0    | Production WSGI server (via `SERVE_COMMAND` env var)             |
+| Python         | 3.12      | Pinned in `Dockerfile`; deps managed by uv                        |
+| Django         | 5.2.x LTS | LTS release (supported through April 2028)                        |
+| PostgreSQL     | 16        | **Required** — uses `contrib.postgres` full-text search fields   |
+| Memcached      | 1.6.15    | Cache backend (pymemcache driver), 10-minute default timeout      |
+| nginx          | 1.22.0    | Reverse proxy + static file serving                              |
+| gunicorn       | 23.0      | Production WSGI server (via `SERVE_COMMAND` env var)              |
 
 Key Python dependencies (declared in `pyproject.toml`, locked in `uv.lock`):
 
 - `django-autocomplete-light` (dal) — autocomplete widgets throughout forms/views
-- `django-crispy-forms` (bootstrap4 template pack) — form rendering
+- `django-crispy-forms` + `crispy-bootstrap4` — form rendering (template pack is a separate package as of crispy-forms 2.0)
 - `django-filer` — file/media management
 - `django-compressor` + `django-libsass` — SCSS compilation, static asset bundling
 - `django-markdownify` — markdown rendering (bleach-whitelisted)
 - `django-mptt`, `django-polymorphic` — tree structures, polymorphic models
 - `lxml` — TEI XML parsing and validation
 - `psycopg2-binary` — PostgreSQL driver
+- `pymemcache` — memcached client (replaces python-memcached, removed in Django 4.1)
 - `easy-thumbnails` — image thumbnails
 
 Dev tooling: `ruff` (formatting + linting), `coverage` + `django-coverage-plugin`.
@@ -68,7 +69,7 @@ and `django-coverage-plugin` are in `pyproject.toml` dependencies and available 
         ├── admin.py
         ├── urls.py             # App URL conf (all app routes)
         ├── apps.py
-        ├── migrations/         # 76 migrations
+        ├── migrations/         # 77 migrations
         ├── management/commands/  # Data import/export/maintenance scripts
         ├── templatetags/
         ├── tests/              # test_models.py, test_views.py, test_views_autocomplete.py
@@ -120,7 +121,7 @@ are read from `.env`:
 | `make blank`    | Drop the `dh` database (internal helper used by `wipe`/`restore`) |
 | `make backup`   | `pg_dump` to `data/backup.sql`                               |
 | `make restore`  | Restore `data/backup.sql`                                     |
-| `make test`     | Run test suite with `--parallel 4`                            |
+| `make test`     | Run test suite with `--parallel 4` (⚠️ see note below)            |
 | `make coverage` | Run tests under coverage, generate HTML report                |
 | `make check`    | `manage.py check`                                             |
 | `make dumptest` | Dump test fixture to `abstracts/fixtures/test.json`           |
@@ -140,14 +141,21 @@ python manage.py <command>
 - Tests live in `dh_abstracts/abstracts/tests/`.
 - Test classes use `fixtures = ["test.json"]` (generated via `make dumptest`).
 - `CachelessTestCase` (in `test_views.py`) clears memcached before each test — use it
-  for view tests that depend on cache state.
+  for view tests that depend on cache state. The cache backend is now `PyMemcacheCache`
+  (pymemcache driver) instead of the removed `MemcachedCache` (python-memcached).
 - Run the full suite: `make test`.
+- ⚠️ **Parallel test runner note:** `make test` uses `--parallel 4`. On Python 3.12 with
+  lxml 5.x, the `test_invalid_tei` test raises an `lxml.etree.XMLSchemaParseError` whose
+  exception object cannot be pickled across process boundaries, causing the parallel
+  runner to crash. If this occurs, run `docker-compose exec app python manage.py test`
+  (without `--parallel`) instead. The test itself passes when run serially.
 - Regenerate the test fixture after model/data changes: `make wipe && make dumptest`.
 - Load testing uses Locust (`locust/locustfile.py`); it requires `data/all_ids.json`,
   produced by `python manage.py dump_ids`.
-- **Pre-existing test failures:** As of the uv migration (July 2026), the test suite has
-  5 known failures that are **not** caused by the migration — they fail identically on the
-  old `requirements.txt`-based environment as well:
+- **Pre-existing test failures:** As of the Django 5.2 upgrade (July 2026), the test suite has
+  5 known failures that are **not** caused by the upgrade — they fail identically on the
+  old Django 3.2 environment as well. The upgrade to Django 5.2 introduced no new
+  failures (verified: 204 tests, same 5 failures before and after).
   - `CreateConferenceViewTest.test_post` — POST to `conference_create` returns a response
     without the expected "created" success message (form validation issue).
   - `EditConferenceViewTest.test_post` — same pattern; expects "updated" message.
@@ -281,11 +289,80 @@ The app produces two flavors of CSV exports (configured in `settings.py`):
 A denormalized "works" CSV (`dh_conferences_works.csv`) is also available, with column
 definitions in `DENORMALIZED_HEADERS`.
 
+## Future Django 5.2 Feature Adoption
+
+The following opportunities for adopting newer Django features are documented for future
+work. They are **not** implemented in the current upgrade — each would require careful
+design, testing, and potentially migrations.
+
+1. **`GeneratedField` (Django 5.0+)**: The `TextIndexedModel.search_text` field (currently
+   a `SearchVectorField` manually updated via `SearchVector` annotations) could be replaced
+   with a database `GeneratedField` that auto-computes the search vector from `title` and
+   `full_text` columns. This would eliminate the need for manual `search_text` updates in
+   views and management commands. Files affected: `abstracts/models.py`,
+   `abstracts/views.py`, `abstracts/management/commands/import_2016.py`.
+
+2. **psycopg3 (Django 4.2+)**: Replace `psycopg2-binary` with `psycopg[binary]` (psycopg3).
+   Django 5.2 prefers psycopg3 and will use it automatically if installed. psycopg2 support
+   is likely to be deprecated and removed in a future Django version. Note: there are known
+   commit-semantics differences between psycopg2 and psycopg3 (see Django ticket #37033)
+   that may affect `on_commit` callback patterns, though this project doesn't currently use
+   `on_commit`.
+
+3. **`LoginRequiredMiddleware` (Django 4.0+)**: The custom `user_is_staff` decorator in
+   `views.py` could be replaced or simplified using `LoginRequiredMiddleware` combined with
+   Django's built-in `PermissionRequiredMixin` / `UserPassesTestMixin`, reducing custom auth
+   boilerplate. The `StaffRequiredMixin` pattern could use middleware-level enforcement.
+
+4. **`STORAGES` setting (Django 4.2+)**: The `FILER_STORAGES` dict (`settings.py`) and the
+   implicit default static/file storage backends could be consolidated into Django 4.2+'s
+   unified `STORAGES` setting, which provides a cleaner configuration interface and supports
+   multiple named storage backends.
+
+5. **`Model.choices` with Python `enum` (Django 5.0+)**: Model fields using choices tuples
+   (e.g., `WorkType`, `License`) could be refactored to use `enum` classes with
+   `models.Field.choices`, providing better type safety and IDE support.
+
+6. **`db_default` (Django 4.1+)**: Model fields with Python-level defaults (e.g.,
+   `notes = models.TextField(default="")`) could use `db_default` to set database-level
+   defaults, ensuring consistency even for raw SQL inserts.
+
+7. **Redis cache backend (Django 4.0+)**: Django 4.0+ includes a built-in Redis cache
+   backend (`django.core.cache.backends.redis.RedisCache`). If memcached is ever found
+   limiting, Redis offers persistence, data structures, and pub/sub. This would replace
+   `PyMemcacheCache` and the memcached Docker service.
+
+8. **Async views and ORM (Django 3.1+ / 4.2+)**: Views that perform I/O-bound work (e.g.,
+   the TEI XML import, CSV export, Internet Archive loading in `ia_load.py`) could be
+   converted to async views using `async def` and async ORM methods (`adelete()`,
+   `acreate()`, `aget()`). This would improve throughput for concurrent requests during
+   long-running operations.
+
+9. **PostgreSQL 16 features**: The upgrade to PostgreSQL 16 enables access to improved
+   query parallelism, logical replication enhancements, and better performance for
+   full-text search workloads.
+
+10. **`DEFAULT_AUTO_FIELD` modernization**: Currently set to `AutoField`. While changing
+    to `BigAutoField` (the Django default since 3.2) would require migrations for all
+    models, it future-proofs the schema and aligns with Django's recommended default.
+
+11. **Fix `make nightly`**: The broken `make nightly` target (calling nonexistent
+    `regenerate_text_indices` and `export_all_csv`) could be fixed to use the actual
+    `export_tables` command. With `GeneratedField` adoption (#1 above), the text index
+    regeneration would become automatic, potentially eliminating the need for a nightly
+    regeneration command entirely.
+
+12. **Fix email env var mismatch**: The `EMAIL_ADDRESS` vs `DEFAULT_FROM_EMAIL` mismatch
+    in `.env.template` and the missing `=` on `EMAIL_PORT` are pre-existing issues that
+    could be addressed alongside the settings.py changes.
+
 ## Things to Watch Out For
 
-- **Migrations are committed and historical.** There are 76 migrations including merge
+- **Migrations are committed and historical.** There are 77 migrations including merge
   migrations. Never squash or renumber existing migrations. New migrations should continue
-  the numbering sequence.
+  the numbering sequence. Migration 0077 is a state-only migration generated during the
+  Django 5.2 upgrade — it syncs field serialization (lowercase model names in `to=`
+  references) with Django 5.2's representation; no database schema changes.
 - **The `FileImportMessgaes` model name has a typo** (should be "Messages"). Renaming it
   requires a migration and updates across models, admin, views, and tests. Leave it unless
   explicitly tasked to fix it.
