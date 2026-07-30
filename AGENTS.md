@@ -239,6 +239,78 @@ Keyword, Topic, etc.). These are invoked from the editor views.
   routes). `DATA_OUTPUT_PATH = "/vol/data"` (in-container path where CSV exports are
   written).
 
+## Type Checking
+
+The project uses **mypy + django-stubs** for static type checking. Like `ruff`, these are
+**dev-only dependencies** (in the `[dependency-groups] dev` table in `pyproject.toml`),
+excluded from the Docker image via `uv sync --no-dev`, and run on the **host** via
+`uv run mypy`.
+
+The django-stubs mypy plugin bootstraps the Django app at type-check time, synthesizing
+types for model fields, reverse relations, queryset generics, and Meta classes. This means
+useful ORM type checking without manually annotating every model relationship.
+
+**How to run:**
+
+- `make typecheck` — runs mypy and prints errors to stdout.
+- `make typecheck-baseline` — runs mypy and writes output to `data/mypy_baseline.txt`
+  (the `data/` directory is gitignored).
+- Direct: `cd dh_abstracts && POSTGRES_DB=dh POSTGRES_USER=dh POSTGRES_PASSWORD=dummy DH_SECRET=dummy uv run mypy . --exclude abstracts/migrations/`
+
+**Why dummy env vars are required:** The django-stubs plugin imports `dhweb.settings` at
+type-check time. That module reads `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` from
+`os.environ` with no defaults (KeyError if unset), crashing mypy before it can produce any
+output. The Makefile targets and pre-commit hook bake in dummy values to prevent this.
+
+**Config location:** `[tool.mypy]` and `[tool.django-stubs]` in `pyproject.toml`.
+
+**Exclusions (and why):**
+- **Migrations** (`[[tool.mypy.overrides]] module = "*.migrations.*"`): Auto-generated
+  migrations reference models that may no longer exist and use string-based field
+  references; they don't type-check and shouldn't. Also excluded via `--exclude
+  abstracts/migrations/` on the command line.
+- **settings.py** (`module = "dhweb.settings"`): Reads `os.environ` with no defaults for
+  required vars; generates type-check noise that isn't actionable. Note: this override
+  suppresses type errors but does NOT prevent the `KeyError` at import time — that's why
+  dummy env vars are still needed.
+
+**`django-stubs-ext` monkeypatch:** `dhweb/settings.py` contains a guarded
+`django_stubs_ext.monkeypatch()` call (wrapped in `try/except ImportError`) that patches
+Django's generic types (`QuerySet`, `Manager`, etc.) to support subscripting at runtime
+(e.g. `QuerySet[Work]`). The guard makes it a no-op in production (where django-stubs-ext
+is not installed). This does not change existing runtime behavior.
+
+**Current status:** `strict = false` — the goal is a permissive baseline, not zero errors
+on day one. The baseline run found **14 errors in 6 files** (out of 30 source files
+checked):
+
+| Error code | Count | Description |
+| --- | --- | --- |
+| `import-untyped` | 7 | Missing library stubs for `filer`, `lxml`, `dal`, `debug_toolbar` |
+| `var-annotated` | 4 | Django reverse-relation managers need type annotations |
+| `arg-type` | 2 | `GenericSitemap` config type mismatch in `dhweb/urls.py` |
+
+**Pre-commit hook:** The mypy hook in `.pre-commit-config.yaml` is in `stages: [manual]`
+— it only runs when explicitly invoked (`pre-commit run mypy`), not on every commit. This
+is intentional because the codebase is untyped and `strict = false` still surfaces errors.
+The hook can be moved to the commit stage once the error count is reduced to zero in
+future annotation work.
+
+**Makefile targets:**
+
+| Target | Action |
+| --- | --- |
+| `make typecheck` | Run mypy, print errors to stdout |
+| `make typecheck-baseline` | Run mypy, write output to `data/mypy_baseline.txt` |
+
+**Future work:**
+- Gradual annotation of existing code (models, views, forms, management commands)
+- Tightening mypy strictness flags (`disallow_untyped_defs`, `no_implicit_optional`, etc.)
+- Moving the pre-commit hook from manual to commit stage once error count reaches zero
+- Installing `lxml-stubs` and other third-party stub packages to resolve `import-untyped`
+  errors
+- Setting up pyright for editor-time feedback (optional)
+
 ## Dependency Management
 
 Dependencies are managed with [uv](https://docs.astral.sh/uv/):

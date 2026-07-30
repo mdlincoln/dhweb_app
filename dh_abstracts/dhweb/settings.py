@@ -12,6 +12,18 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 
 import os
 
+try:
+    import django_stubs_ext
+
+    # Patches Django's generic types (QuerySet, Manager, etc.) so they support
+    # subscripting at runtime, e.g. QuerySet[Work]. Required for django-stubs
+    # type checking. Dev-only — django-stubs-ext is not installed in the Docker
+    # image (excluded via `uv sync --no-dev`), so the guard makes this a no-op
+    # in production.
+    django_stubs_ext.monkeypatch()
+except ImportError:
+    pass
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

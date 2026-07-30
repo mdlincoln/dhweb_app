@@ -31,6 +31,8 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ruff==0.15.22",
+    "django-stubs[compatible-mypy]~=5.2.9",
+    "django-stubs-ext~=5.2.9",
 ]
 
 [tool.uv]
@@ -64,3 +66,22 @@ ignore = ["E501", "E722"]
 
 [tool.ruff.format]
 # Ruff's default style is black-compatible. No overrides needed.
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+python_version = "3.12"
+strict = false
+show_error_codes = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = "*.migrations.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "dhweb.settings"
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "dhweb.settings"

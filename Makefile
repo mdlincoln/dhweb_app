@@ -51,3 +51,7 @@ lint:
 	uv run ruff check .
 format:
 	uv run ruff format .
+typecheck:
+	cd dh_abstracts && POSTGRES_DB=dh POSTGRES_USER=dh POSTGRES_PASSWORD=dummy DH_SECRET=dummy uv run mypy . --exclude abstracts/migrations/
+typecheck-baseline:
+	cd dh_abstracts && POSTGRES_DB=dh POSTGRES_USER=dh POSTGRES_PASSWORD=dummy DH_SECRET=dummy uv run mypy . --exclude abstracts/migrations/ > ../data/mypy_baseline.txt

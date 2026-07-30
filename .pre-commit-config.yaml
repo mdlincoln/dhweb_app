@@ -7,3 +7,17 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
         name: ruff (format)
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (type check)
+        entry: bash -c 'cd dh_abstracts && POSTGRES_DB=dh POSTGRES_USER=dh POSTGRES_PASSWORD=dummy DH_SECRET=dummy uv run mypy . --exclude abstracts/migrations/'
+        language: system
+        types: [python]
+        stages: [manual]  # opt-in only (pre-commit run mypy); move to commit stage once baseline errors reach zero
+        # With pass_filenames: false, files/exclude control WHEN the hook
+        # triggers (which staged files match), not WHAT mypy checks. mypy's
+        # check scope is determined by the command path + pyproject.toml overrides.
+        files: ^dh_abstracts/abstracts/
+        exclude: ^dh_abstracts/abstracts/migrations/
+        pass_filenames: false  # mypy uses pyproject.toml config, not per-file args
