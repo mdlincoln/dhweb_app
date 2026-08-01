@@ -33,6 +33,7 @@ dev = [
     "ruff==0.15.22",
     "django-stubs[compatible-mypy]~=5.2.9",
     "django-stubs-ext~=5.2.9",
+    "lxml-stubs>=0.5.1",
 ]
 
 [tool.uv]
@@ -82,6 +83,24 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = "dhweb.settings"
 ignore_errors = true
+
+# Third-party packages without published type stubs or py.typed markers.
+# These are Django ecosystem libraries that don't ship type information.
+[[tool.mypy.overrides]]
+module = "filer.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "dal.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "debug_toolbar"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "debug_toolbar.*"
+ignore_missing_imports = true
 
 [tool.django-stubs]
 django_settings_module = "dhweb.settings"
