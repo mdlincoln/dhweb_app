@@ -280,21 +280,16 @@ Django's generic types (`QuerySet`, `Manager`, etc.) to support subscripting at 
 (e.g. `QuerySet[Work]`). The guard makes it a no-op in production (where django-stubs-ext
 is not installed). This does not change existing runtime behavior.
 
-**Current status:** `strict = false` — the goal is a permissive baseline, not zero errors
-on day one. The baseline run found **14 errors in 6 files** (out of 30 source files
-checked):
-
-| Error code | Count | Description |
-| --- | --- | --- |
-| `import-untyped` | 7 | Missing library stubs for `filer`, `lxml`, `dal`, `debug_toolbar` |
-| `var-annotated` | 4 | Django reverse-relation managers need type annotations |
-| `arg-type` | 2 | `GenericSitemap` config type mismatch in `dhweb/urls.py` |
+**Current status:** `strict = false` — the type check passes with **0 errors** across 30
+source files. M2M `through=` references in `models.py` use app-qualified strings
+(e.g. `"abstracts.Authorship"`) so the django-stubs plugin can resolve them; third-party
+packages without stubs (`filer`, `dal`, `debug_toolbar`) are suppressed via
+`ignore_missing_imports` overrides in `pyproject.toml`.
 
 **Pre-commit hook:** The mypy hook in `.pre-commit-config.yaml` is in `stages: [manual]`
-— it only runs when explicitly invoked (`pre-commit run mypy`), not on every commit. This
-is intentional because the codebase is untyped and `strict = false` still surfaces errors.
-The hook can be moved to the commit stage once the error count is reduced to zero in
-future annotation work.
+— it only runs when explicitly invoked (`pre-commit run mypy`), not on every commit.
+Since the type check now passes with zero errors, the hook can be moved to the commit
+stage in a future change.
 
 **Makefile targets:**
 
@@ -306,9 +301,7 @@ future annotation work.
 **Future work:**
 - Gradual annotation of existing code (models, views, forms, management commands)
 - Tightening mypy strictness flags (`disallow_untyped_defs`, `no_implicit_optional`, etc.)
-- Moving the pre-commit hook from manual to commit stage once error count reaches zero
-- Installing `lxml-stubs` and other third-party stub packages to resolve `import-untyped`
-  errors
+- Moving the pre-commit hook from manual to commit stage
 - Setting up pyright for editor-time feedback (optional)
 
 ## Dependency Management
