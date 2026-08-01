@@ -18,7 +18,7 @@ dSHARP-CMU / cmu-lib GitHub organizations.
 | Python         | 3.12      | Pinned in `Dockerfile`; deps managed by uv                        |
 | Django         | 5.2.x LTS | LTS release (supported through April 2028)                        |
 | PostgreSQL     | 16        | **Required** — uses `contrib.postgres` full-text search fields   |
-| Memcached      | 1.6.15    | Cache backend (pymemcache driver), 10-minute default timeout      |
+| Redis          | 7.4       | Cache backend (Django built-in RedisCache, redis-py driver), 10-minute default timeout |
 | nginx          | 1.22.0    | Reverse proxy + static file serving                              |
 | gunicorn       | 23.0      | Production WSGI server (via `SERVE_COMMAND` env var)              |
 
@@ -32,7 +32,7 @@ Key Python dependencies (declared in `pyproject.toml`, locked in `uv.lock`):
 - `django-mptt`, `django-polymorphic` — tree structures, polymorphic models
 - `lxml` — TEI XML parsing and validation
 - `psycopg2-binary` — PostgreSQL driver
-- `pymemcache` — memcached client (replaces python-memcached, removed in Django 4.1)
+- `redis` (redis-py) — drives Django's built-in `RedisCache` cache backend
 - `easy-thumbnails` — image thumbnails
 
 Dev tooling: `ruff` (formatting + linting), `coverage` + `django-coverage-plugin`.
@@ -45,7 +45,7 @@ and `django-coverage-plugin` are in `pyproject.toml` dependencies and available 
 
 ```
 .
-├── docker-compose.yml          # Orchestrates postgres, app, memcached, nginx
+├── docker-compose.yml          # Orchestrates postgres, app, redis, nginx
 ├── Dockerfile                  # App image build (uv-based)
 ├── pyproject.toml              # PEP 621 dependency spec (uv)
 ├── uv.lock                     # Locked dependency manifest (uv)
@@ -95,8 +95,6 @@ and `DEBUG_STATUS=True`.
 Beyond the required `POSTGRES_*`, `DH_SECRET`, and `ALLOWED_HOSTS` vars, the following
 are read from `.env`:
 
-- `MEMCACHED_COMMAND` — memcached launch command, defaults to `memcached -m 1024` (used in
-  `docker-compose.yml`).
 - `EMAIL_HOST` — SMTP server hostname. Email sending is not configured by default and will
   fail if this is not set; optional for deployments that do not need email.
 - `EMAIL_PORT` — SMTP port, defaults to `25`.
@@ -113,7 +111,7 @@ are read from `.env`:
 | `make down`     | Tear down all containers                                      |
 | `make attach`   | `exec bash` into the app container                            |
 | `make db`       | Open `psql` into postgres (user `dh`)                          |
-| `make restart`  | `docker-compose restart app nginx memcached`                  |
+| `make restart`  | `docker-compose restart app nginx redis`                  |
 | `make migrate`  | Run `manage.py migrate`                                       |
 | `make deploy`   | migrate + collectstatic + restart                              |
 | `make rebuild`  | Rebuild app & nginx images without cache                      |
@@ -140,9 +138,9 @@ python manage.py <command>
 
 - Tests live in `dh_abstracts/abstracts/tests/`.
 - Test classes use `fixtures = ["test.json"]` (generated via `make dumptest`).
-- `CachelessTestCase` (in `test_views.py`) clears memcached before each test — use it
-  for view tests that depend on cache state. The cache backend is now `PyMemcacheCache`
-  (pymemcache driver) instead of the removed `MemcachedCache` (python-memcached).
+- `CachelessTestCase` (in `test_views.py`) clears the cache (Redis) before each test —
+  use it for view tests that depend on cache state. The cache backend is Django's
+  built-in `RedisCache` (redis-py driver).
 - Run the full suite: `make test`.
 - ⚠️ **Parallel test runner note:** `make test` uses `--parallel 4`. On Python 3.12 with
   lxml 5.x, the `test_invalid_tei` test raises an `lxml.etree.XMLSchemaParseError` whose
@@ -205,7 +203,7 @@ Keyword, Topic, etc.). These are invoked from the editor views.
   (`SearchVector`, `SearchRank`, `SearchQuery`) and `SearchVectorField`. Do not assume
   SQLite/MySQL compatibility.
 - **Caching:** Views are wrapped with `cache_for_anon()` (caches responses for anonymous
-  users only). Memcached is the cache backend. Be aware of cache invalidation when
+  users only). Redis is the cache backend. Be aware of cache invalidation when
   modifying data through editor views.
 - **TEI XML namespace:** `http://www.tei-c.org/ns/1.0`. XML files are validated against
   a TEI schema during import (see `import_xml_file`).
@@ -392,10 +390,13 @@ design, testing, and potentially migrations.
    `notes = models.TextField(default="")`) could use `db_default` to set database-level
    defaults, ensuring consistency even for raw SQL inserts.
 
-7. **Redis cache backend (Django 4.0+)**: Django 4.0+ includes a built-in Redis cache
-   backend (`django.core.cache.backends.redis.RedisCache`). If memcached is ever found
-   limiting, Redis offers persistence, data structures, and pub/sub. This would replace
-   `PyMemcacheCache` and the memcached Docker service.
+7. **Redis cache backend (Django 4.0+)**: **Implemented.** As of the Django 5.2 upgrade the
+   app uses Django's built-in Redis cache backend (`django.core.cache.backends.redis.RedisCache`)
+   backed by an ephemeral Redis 7.4 service (redis-py driver, 10-minute default timeout, no
+   persistence volume), replacing the previous default cache backend and its dedicated Docker
+   service. Possible future refinements: add a Redis persistence volume (no Django code change),
+   install `hiredis-py` as a performance accelerator, or adopt `django-redis` for advanced cache
+   features.
 
 8. **Async views and ORM (Django 3.1+ / 4.2+)**: Views that perform I/O-bound work (e.g.,
    the TEI XML import, CSV export, Internet Archive loading in `ia_load.py`) could be

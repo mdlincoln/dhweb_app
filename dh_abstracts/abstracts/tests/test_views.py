@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.core.cache import cache
@@ -30,6 +31,25 @@ class CachelessTestCase(TestCase):
     def __call__(self, *args, **kwargs):
         cache.clear()
         return super().__call__(*args, **kwargs)
+
+
+class DefaultCacheBackendTest(TestCase):
+    """
+    Verifies the default cache backend is Django's built-in Redis backend and
+    that it performs a live set/get round trip through the running Redis service.
+    """
+
+    def test_default_cache_backend_is_redis(self):
+        self.assertEqual(
+            settings.CACHES["default"]["BACKEND"],
+            "django.core.cache.backends.redis.RedisCache",
+        )
+        self.assertIn("redis", settings.CACHES["default"]["LOCATION"])
+
+    def test_cache_roundtrip_via_redis(self):
+        cache.set("_dh_cache_roundtrip", "ok", 10)
+        self.assertEqual(cache.get("_dh_cache_roundtrip"), "ok")
+        cache.delete("_dh_cache_roundtrip")
 
 
 def is_list_unique(x):

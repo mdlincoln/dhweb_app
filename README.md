@@ -12,9 +12,9 @@ This is a Django application orchestrated with Docker Compose, comprising 4 key 
 
 The application is served behind nginx. `/nginx/nginx.template` shows the suggested formation of your `default.conf` file, setting up the reverse proxy to the Django service and serving the static files. the `/nginx` folder is passed as a volume to `/etc/nginx/conf.d` in the nginx docker container.
 
-### memcached
+### redis
 
-Cache set up for Django
+Cache set up for Django via Django's built-in `django.core.cache.backends.redis.RedisCache` backend, backed by an ephemeral Redis service (no persistence volume).
 
 ### postgres
 
@@ -34,7 +34,7 @@ In production we currently use gunicorn to serve, so the `SERVE_COMMAND` is set 
 
 ## Updates
 
-Update nginx, memcached, and postgres versions by incrementing their version tags in `docker-compose.yml`
+Update nginx, redis, and postgres versions by incrementing their version tags in `docker-compose.yml`
 
 Update underlying Python version in `Dockerfile`
 

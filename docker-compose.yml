@@ -21,18 +21,18 @@ services:
       - "25:25"
     links:
       - "postgres:postgres"
-      - "memcached:memcached"
+      - "redis:redis"
     env_file: .env
     depends_on:
       - postgres
-      - memcached
+      - redis
 
-  memcached:
-    image: memcached:1.6.15
+  redis:
+    image: redis:7.4
     restart: always
     expose:
-      - 11211
-    command: "${MEMCACHED_COMMAND}"
+      - 6379
+    command: redis-server --save "" --appendonly no
 
   nginx:
     image: nginx:1.22.0
