@@ -82,7 +82,7 @@ class Conference(models.Model):
     )
     series = models.ManyToManyField(
         ConferenceSeries,
-        through="SeriesMembership",
+        through="abstracts.SeriesMembership",
         through_fields=("conference", "series"),
         related_name="conferences",
         blank=True,
@@ -118,7 +118,7 @@ class Conference(models.Model):
         help_text="City where the conference took place",
     )
     hosting_institutions = models.ManyToManyField(
-        "Institution",
+        "abstracts.Institution",
         related_name="conferences",
         blank=True,
         help_text="Institutions that organized the conference",
@@ -948,13 +948,13 @@ class Author(ChangeTrackedModel):
     model_description = "A person who has authored at least one abstract in this database. All attributes of the author are established in the context of a given work, so authors have no inherent/immutable attributes beyond this unique identifier."
     works = models.ManyToManyField(
         Work,
-        through="Authorship",
+        through="abstracts.Authorship",
         through_fields=("author", "work"),
         related_name="authors",
     )
     appellations = models.ManyToManyField(
         Appellation,
-        through="Authorship",
+        through="abstracts.Authorship",
         through_fields=("author", "appellation"),
         related_name="authors",
     )

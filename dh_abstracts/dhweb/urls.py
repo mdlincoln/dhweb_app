@@ -14,11 +14,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from datetime import datetime
+
 from django.contrib import admin
-from django.urls import include, path, reverse
-from django.contrib.sitemaps import Sitemap, GenericSitemap
-from django.contrib.sitemaps.views import index, sitemap
 from django.contrib.flatpages.models import FlatPage
+from django.contrib.sitemaps import GenericSitemap, Sitemap
+from django.contrib.sitemaps.views import index, sitemap
+from django.db.models import QuerySet
+from django.urls import include, path, reverse
+
 from abstracts import models
 
 
@@ -34,6 +38,19 @@ class CoreViewSitemap(Sitemap):
         return reverse(item)
 
 
+# GenericSitemap expects a Mapping[str, datetime | QuerySet[Model] | str].
+# When a dict literal mixes a QuerySet value with a str value (e.g. "date_field"),
+# mypy widens the value type to Iterable[object]. Annotating the dict with the
+# union type prevents the widening without resorting to Any.
+work_sitemap_info: dict[str, datetime | QuerySet[models.Work] | str] = {
+    "queryset": models.Work.objects.all(),
+    "date_field": "last_updated",
+}
+author_sitemap_info: dict[str, datetime | QuerySet[models.Author] | str] = {
+    "queryset": models.Author.objects.all(),
+    "date_field": "last_updated",
+}
+
 dh_sitemaps = {
     "sitemaps": {
         "series": GenericSitemap(
@@ -43,13 +60,13 @@ dh_sitemaps = {
             protocol="https",
         ),
         "work": GenericSitemap(
-            {"queryset": models.Work.objects.all(), "date_field": "last_updated"},
+            work_sitemap_info,
             changefreq="monthly",
             priority=1.0,
             protocol="https",
         ),
         "author": GenericSitemap(
-            {"queryset": models.Author.objects.all(), "date_field": "last_updated"},
+            author_sitemap_info,
             changefreq="monthly",
             priority=0.9,
             protocol="https",
