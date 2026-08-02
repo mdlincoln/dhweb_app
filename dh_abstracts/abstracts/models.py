@@ -28,7 +28,12 @@ class ChangeTrackedModel(models.Model):
 
 
 class TextIndexedModel(models.Model):
-    search_text = SearchVectorField(null=True, editable=False)
+    search_text = models.GeneratedField(
+        expression=SearchVector("title", weight="A", config="english")
+        + SearchVector("full_text", weight="B", config="english"),
+        output_field=SearchVectorField(),
+        db_persist=True,
+    )
 
     class Meta:
         abstract = True
@@ -36,6 +41,7 @@ class TextIndexedModel(models.Model):
 
 
 class ConferenceSeries(models.Model):
+    id = models.BigAutoField(primary_key=True)
     model_description = "A formalized series of multiple events, such as an annual conference or recurring symposium"
     title = models.CharField(max_length=200, unique=True, help_text="Full name")
     abbreviation = models.CharField(
@@ -45,6 +51,7 @@ class ConferenceSeries(models.Model):
         blank=True,
         null=False,
         default="",
+        db_default="",
         help_text="Discursive notes, generally concerning the history of this series",
     )
 
@@ -66,6 +73,7 @@ class ConferenceSeries(models.Model):
 
 
 class Conference(models.Model):
+    id = models.BigAutoField(primary_key=True)
     ENTRY_STATUS = (
         ("n", "Not started"),
         ("i", "Incomplete"),
@@ -93,6 +101,7 @@ class Conference(models.Model):
         blank=True,
         null=False,
         default="",
+        db_default="",
         help_text="Further descriptive information",
     )
     url = models.URLField(
@@ -106,6 +115,7 @@ class Conference(models.Model):
         blank=True,
         null=False,
         default="",
+        db_default="",
         help_text="Optional thematic title (e.g. 'Big Tent Digital Humanities')",
     )
     start_date = models.DateField(null=True, blank=True, help_text="YYYY-MM-DD")
@@ -115,6 +125,7 @@ class Conference(models.Model):
         blank=True,
         null=False,
         default="",
+        db_default="",
         help_text="City where the conference took place",
     )
     hosting_institutions = models.ManyToManyField(
@@ -128,6 +139,7 @@ class Conference(models.Model):
         blank=True,
         null=False,
         default="",
+        db_default="",
         verbose_name="State / Province / Region",
         help_text="State, province, or region where the conference was held",
     )
@@ -142,18 +154,21 @@ class Conference(models.Model):
         max_length=20000,
         blank=True,
         default="",
+        db_default="",
         help_text="Citations to conference proceedings",
     )
     contributors = models.TextField(
         max_length=20000,
         blank=True,
         default="",
+        db_default="",
         help_text="Individuals or organizations who contributed data about this conference",
     )
     attendance = models.TextField(
         max_length=20000,
         blank=True,
         default="",
+        db_default="",
         help_text="Summary information about conference attendance, with source links",
     )
     entry_status = models.CharField(
@@ -461,6 +476,7 @@ class Conference(models.Model):
 
 
 class ConferenceDocument(models.Model):
+    id = models.BigAutoField(primary_key=True)
     document = FilerFileField(
         null=True,
         blank=True,
@@ -491,6 +507,7 @@ class ConferenceDocument(models.Model):
 
 
 class Organizer(ChangeTrackedModel):
+    id = models.BigAutoField(primary_key=True)
     model_description = "An organizer of academic events, such as a scholarly association or academic center."
     name = models.CharField(max_length=200, unique=True)
     abbreviation = models.CharField(max_length=100, unique=True)
@@ -511,6 +528,7 @@ class Organizer(ChangeTrackedModel):
 
 
 class SeriesMembership(models.Model):
+    id = models.BigAutoField(primary_key=True)
     model_description = "Many-to-many relationships between conferences and the (potentially) multiple series they belong to."
     series = models.ForeignKey(
         ConferenceSeries,
@@ -556,20 +574,24 @@ class Tag(models.Model):
 
 
 class Keyword(Tag):
+    id = models.BigAutoField(primary_key=True)
     model_description = "Author-supplied keywords describing the content of a work"
 
 
 class Language(Tag):
+    id = models.BigAutoField(primary_key=True)
     model_description = "Languages in which works are written"
     code = models.CharField(blank=True, null=True, max_length=3, unique=True)
 
 
 class Topic(Tag):
+    id = models.BigAutoField(primary_key=True)
     model_description = "Conference-specific controlled vocabulary of topics"
     pass
 
 
 class WorkType(models.Model):
+    id = models.BigAutoField(primary_key=True)
     model_description = (
         "Controlled vocabulary of work types, such as 'paper' or 'keynote'"
     )
@@ -596,6 +618,7 @@ class WorkType(models.Model):
 
 
 class License(models.Model):
+    id = models.BigAutoField(primary_key=True)
     model_description = "Licenses that may be applicable to full texts"
     title = models.CharField(
         max_length=100, unique=True, help_text="Full title of the license"
@@ -624,6 +647,7 @@ class License(models.Model):
 
 
 class Work(TextIndexedModel, ChangeTrackedModel):
+    id = models.BigAutoField(primary_key=True)
     model_description = (
         "A record for a single work such as a paper, keynote, or session."
     )
@@ -648,6 +672,7 @@ class Work(TextIndexedModel, ChangeTrackedModel):
         blank=True,
         null=False,
         default="",
+        db_default="",
         help_text="Full text content of the abstract, including references, but excluding authorship information.",
     )
     full_text_type = models.CharField(
@@ -656,6 +681,7 @@ class Work(TextIndexedModel, ChangeTrackedModel):
         blank=True,
         null=False,
         default="",
+        db_default="",
         help_text="Format of the full text (currently either plain text, or XML)",
     )
     keywords = models.ManyToManyField(
@@ -711,15 +737,6 @@ class Work(TextIndexedModel, ChangeTrackedModel):
     def __str__(self):
         return self.display_title
 
-    def save(self, *args, **kwargs):
-        res = super().save(*args, **kwargs)
-        # Update the search index
-        Work.objects.filter(id=self.id).update(
-            search_text=SearchVector("title", weight="A")
-            + SearchVector("full_text", weight="B")
-        )
-        return res
-
     class Meta(TextIndexedModel.Meta):
         ordering = ["title"]
 
@@ -734,12 +751,14 @@ class Attribute(models.Model):
 
 
 class Appellation(Attribute):
+    id = models.BigAutoField(primary_key=True)
     model_description = "A name belonging to an author"
     first_name = models.CharField(
         max_length=100,
         blank=True,
         null=False,
         default="",
+        db_default="",
         db_index=True,
         help_text="Surname and/or first and middle initials",
     )
@@ -748,6 +767,7 @@ class Appellation(Attribute):
         blank=True,
         null=False,
         default="",
+        db_default="",
         db_index=True,
         help_text="Family name",
     )
@@ -769,6 +789,7 @@ class Appellation(Attribute):
 
 
 class Country(models.Model):
+    id = models.BigAutoField(primary_key=True)
     model_description = "A controlled vocabulary of countries"
     tgn_id = models.URLField(
         max_length=100,
@@ -806,6 +827,7 @@ class Country(models.Model):
 
 
 class CountryLabel(models.Model):
+    id = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=300, db_index=True)
     country = models.ForeignKey(Country, on_delete=models.CASCADE, related_name="names")
 
@@ -814,6 +836,7 @@ class CountryLabel(models.Model):
 
 
 class Institution(ChangeTrackedModel):
+    id = models.BigAutoField(primary_key=True)
     model_description = "Institutions such as universities or research centers, with which authors may be affiliated."
     name = models.CharField(max_length=500, help_text="Institution name")
     city = models.CharField(
@@ -821,6 +844,7 @@ class Institution(ChangeTrackedModel):
         blank=True,
         null=False,
         default="",
+        db_default="",
         help_text="City where the institution is located",
     )
     state_province_region = models.CharField(
@@ -828,6 +852,7 @@ class Institution(ChangeTrackedModel):
         blank=True,
         null=False,
         default="",
+        db_default="",
         verbose_name="State / Province / Region",
         help_text="State, province, or region where the institution is located",
     )
@@ -897,6 +922,7 @@ class Institution(ChangeTrackedModel):
 
 
 class Affiliation(Attribute):
+    id = models.BigAutoField(primary_key=True)
     model_description = (
         "A sub-unit of an Institution, such as a center, department, library, etc."
     )
@@ -905,6 +931,7 @@ class Affiliation(Attribute):
         blank=True,
         null=False,
         default="",
+        db_default="",
         help_text="The name of a department, center, or other subdivision of a larger institution",
     )
     institution = models.ForeignKey(
@@ -945,6 +972,7 @@ class Affiliation(Attribute):
 
 
 class Author(ChangeTrackedModel):
+    id = models.BigAutoField(primary_key=True)
     model_description = "A person who has authored at least one abstract in this database. All attributes of the author are established in the context of a given work, so authors have no inherent/immutable attributes beyond this unique identifier."
     works = models.ManyToManyField(
         Work,
@@ -1083,6 +1111,7 @@ class Author(ChangeTrackedModel):
 
 
 class Authorship(ChangeTrackedModel):
+    id = models.BigAutoField(primary_key=True)
     model_description = "Each authorship describes the relationship of an author to a given work, establishing the authors' attributes as they gave them in the official program where the work was presented."
     author = models.ForeignKey(
         Author,
@@ -1135,6 +1164,7 @@ class Authorship(ChangeTrackedModel):
 
 
 class FileImport(models.Model):
+    id = models.BigAutoField(primary_key=True)
     path = models.CharField(max_length=200, unique=True)
 
     def __str__(self):
@@ -1142,6 +1172,7 @@ class FileImport(models.Model):
 
 
 class FileImportTries(models.Model):
+    id = models.BigAutoField(primary_key=True)
     started = models.DateTimeField(auto_now_add=True)
     file_name = models.ForeignKey(FileImport, on_delete=models.CASCADE)
     conference = models.ForeignKey(Conference, on_delete=models.CASCADE)
@@ -1176,6 +1207,7 @@ class FileImportTries(models.Model):
 
 
 class FileImportMessgaes(models.Model):
+    id = models.BigAutoField(primary_key=True)
     attempt = models.ForeignKey(FileImportTries, on_delete=models.CASCADE)
     message = models.CharField(max_length=10000)
     addition_type = models.CharField(
