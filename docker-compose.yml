@@ -1,8 +1,8 @@
 services:
   postgres:
-    image: postgres:16
+    image: postgres:18
     volumes:
-      - db:/var/lib/postgresql/data
+      - db:/var/lib/postgresql
     expose:
       - 5432
     env_file: .env
