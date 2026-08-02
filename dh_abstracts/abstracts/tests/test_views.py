@@ -379,6 +379,18 @@ class WorkListViewTest(CachelessTestCase):
         self.assertEqual("A Foo Too Far", all_titles[0])
         self.assertTrue(is_list_unique([d.id for d in res.context["work_list"]]))
 
+    def test_search_text_fulltext_weight_b(self):
+        # A work whose only hit is in full_text (weight "B") must still be found.
+        conf = Conference.objects.first()
+        Work.objects.create(
+            conference=conf,
+            title="Zephyr WeightB Work",
+            full_text="This text contains the exceedingly rare token tartarabend only here",
+        )
+        res = self.client.get(reverse("work_list"), data={"text": "tartarabend"})
+        all_titles = [w.title for w in res.context["work_list"]]
+        self.assertIn("Zephyr WeightB Work", all_titles)
+
     def test_ft_available(self):
         res = self.client.get(reverse("work_list"), data={"full_text_available": True})
         self.assertTrue(is_list_unique([d.id for d in res.context["work_list"]]))
