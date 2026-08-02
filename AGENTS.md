@@ -17,7 +17,7 @@ dSHARP-CMU / cmu-lib GitHub organizations.
 | -------------- | --------- | ---------------------------------------------------------------- |
 | Python         | 3.12      | Pinned in `Dockerfile`; deps managed by uv                        |
 | Django         | 5.2.x LTS | LTS release (supported through April 2028)                        |
-| PostgreSQL     | 16        | **Required** — uses `contrib.postgres` full-text search fields   |
+| PostgreSQL     | 18       | **Required** — uses `contrib.postgres` full-text search fields   |
 | Redis          | 7.4       | Cache backend (Django built-in RedisCache, redis-py driver), 10-minute default timeout |
 | nginx          | 1.22.0    | Reverse proxy + static file serving                              |
 | gunicorn       | 23.0      | Production WSGI server (via `SERVE_COMMAND` env var)              |
@@ -31,7 +31,7 @@ Key Python dependencies (declared in `pyproject.toml`, locked in `uv.lock`):
 - `django-markdownify` — markdown rendering (bleach-whitelisted)
 - `django-mptt`, `django-polymorphic` — tree structures, polymorphic models
 - `lxml` — TEI XML parsing and validation
-- `psycopg2-binary` — PostgreSQL driver
+- `psycopg[binary]` — PostgreSQL driver (psycopg3)
 - `redis` (redis-py) — drives Django's built-in `RedisCache` cache backend
 - `easy-thumbnails` — image thumbnails
 
@@ -212,8 +212,8 @@ Keyword, Topic, etc.). These are invoked from the editor views.
   `keyword-autocomplete`). Forms use `ModelSelect2` / `ModelSelect2Multiple`.
 - **Static assets:** SCSS compiled via django-compressor + libsass. Run
   `collectstatic` on deploy (`make deploy` handles this).
-- **`DEFAULT_AUTO_FIELD`** is `AutoField` (not `BigAutoField`). New models should follow
-  this unless a migration explicitly changes it.
+- **`DEFAULT_AUTO_FIELD`** is `BigAutoField` (with explicit `id = models.BigAutoField(primary_key=True)`
+  on each concrete model). New models inherit this unless a migration explicitly changes it.
 - **Time zone:** `America/New_York`.
 - **Code style:** Format and lint with `ruff`. Line length is 88 (ruff formatter is
   black-compatible). ruff is a dev dependency excluded from the Docker image via
@@ -354,81 +354,48 @@ definitions in `DENORMALIZED_HEADERS`.
 
 ## Future Django 5.2 Feature Adoption
 
-The following opportunities for adopting newer Django features are documented for future
-work. They are **not** implemented in the current upgrade — each would require careful
-design, testing, and potentially migrations.
+The following opportunities for adopting newer Django features remain **not** implemented yet
+and would each require careful design, testing, and potentially migrations.
 
-1. **`GeneratedField` (Django 5.0+)**: The `TextIndexedModel.search_text` field (currently
-   a `SearchVectorField` manually updated via `SearchVector` annotations) could be replaced
-   with a database `GeneratedField` that auto-computes the search vector from `title` and
-   `full_text` columns. This would eliminate the need for manual `search_text` updates in
-   views and management commands. Files affected: `abstracts/models.py`,
-   `abstracts/views.py`, `abstracts/management/commands/import_2016.py`.
-
-2. **psycopg3 (Django 4.2+)**: Replace `psycopg2-binary` with `psycopg[binary]` (psycopg3).
-   Django 5.2 prefers psycopg3 and will use it automatically if installed. psycopg2 support
-   is likely to be deprecated and removed in a future Django version. Note: there are known
-   commit-semantics differences between psycopg2 and psycopg3 (see Django ticket #37033)
-   that may affect `on_commit` callback patterns, though this project doesn't currently use
-   `on_commit`.
-
-3. **`LoginRequiredMiddleware` (Django 4.0+)**: The custom `user_is_staff` decorator in
+1. **`LoginRequiredMiddleware` (Django 4.0+)**: The custom `user_is_staff` decorator in
    `views.py` could be replaced or simplified using `LoginRequiredMiddleware` combined with
    Django's built-in `PermissionRequiredMixin` / `UserPassesTestMixin`, reducing custom auth
    boilerplate. The `StaffRequiredMixin` pattern could use middleware-level enforcement.
 
-4. **`STORAGES` setting (Django 4.2+)**: The `FILER_STORAGES` dict (`settings.py`) and the
+2. **`STORAGES` setting (Django 4.2+)**: The `FILER_STORAGES` dict (`settings.py`) and the
    implicit default static/file storage backends could be consolidated into Django 4.2+'s
    unified `STORAGES` setting, which provides a cleaner configuration interface and supports
    multiple named storage backends.
 
-5. **`Model.choices` with Python `enum` (Django 5.0+)**: Model fields using choices tuples
+3. **`Model.choices` with Python `enum` (Django 5.0+)**: Model fields using choices tuples
    (e.g., `WorkType`, `License`) could be refactored to use `enum` classes with
    `models.Field.choices`, providing better type safety and IDE support.
 
-6. **`db_default` (Django 4.1+)**: Model fields with Python-level defaults (e.g.,
-   `notes = models.TextField(default="")`) could use `db_default` to set database-level
-   defaults, ensuring consistency even for raw SQL inserts.
-
-7. **Redis cache backend (Django 4.0+)**: **Implemented.** As of the Django 5.2 upgrade the
-   app uses Django's built-in Redis cache backend (`django.core.cache.backends.redis.RedisCache`)
-   backed by an ephemeral Redis 7.4 service (redis-py driver, 10-minute default timeout, no
-   persistence volume), replacing the previous default cache backend and its dedicated Docker
-   service. Possible future refinements: add a Redis persistence volume (no Django code change),
-   install `hiredis-py` as a performance accelerator, or adopt `django-redis` for advanced cache
-   features.
-
-8. **Async views and ORM (Django 3.1+ / 4.2+)**: Views that perform I/O-bound work (e.g.,
+4. **Async views and ORM (Django 3.1+ / 4.2+)**: Views that perform I/O-bound work (e.g.,
    the TEI XML import, CSV export, Internet Archive loading in `ia_load.py`) could be
    converted to async views using `async def` and async ORM methods (`adelete()`,
    `acreate()`, `aget()`). This would improve throughput for concurrent requests during
    long-running operations.
 
-9. **PostgreSQL 16 features**: The upgrade to PostgreSQL 16 enables access to improved
-   query parallelism, logical replication enhancements, and better performance for
-   full-text search workloads.
+5. **Fix `make nightly`**: The broken `make nightly` target (calling nonexistent
+   `regenerate_text_indices` and `export_all_csv`) could be fixed to use the actual
+   `export_tables` command. With `GeneratedField` adoption, the text index regeneration
+   would become automatic, potentially eliminating the need for a nightly regeneration
+   command entirely.
 
-10. **`DEFAULT_AUTO_FIELD` modernization**: Currently set to `AutoField`. While changing
-    to `BigAutoField` (the Django default since 3.2) would require migrations for all
-    models, it future-proofs the schema and aligns with Django's recommended default.
-
-11. **Fix `make nightly`**: The broken `make nightly` target (calling nonexistent
-    `regenerate_text_indices` and `export_all_csv`) could be fixed to use the actual
-    `export_tables` command. With `GeneratedField` adoption (#1 above), the text index
-    regeneration would become automatic, potentially eliminating the need for a nightly
-    regeneration command entirely.
-
-12. **Fix email env var mismatch**: The `EMAIL_ADDRESS` vs `DEFAULT_FROM_EMAIL` mismatch
-    in `.env.template` and the missing `=` on `EMAIL_PORT` are pre-existing issues that
-    could be addressed alongside the settings.py changes.
+6. **Fix email env var mismatch**: The `EMAIL_ADDRESS` vs `DEFAULT_FROM_EMAIL` mismatch
+   in `.env.template` and the missing `=` on `EMAIL_PORT` are pre-existing issues that
+   could be addressed alongside the settings.py changes.
 
 ## Things to Watch Out For
 
-- **Migrations are committed and historical.** There are 77 migrations including merge
+- **Migrations are committed and historical.** There are 78 migrations including merge
   migrations. Never squash or renumber existing migrations. New migrations should continue
   the numbering sequence. Migration 0077 is a state-only migration generated during the
   Django 5.2 upgrade — it syncs field serialization (lowercase model names in `to=`
-  references) with Django 5.2's representation; no database schema changes.
+  references) with Django 5.2's representation; no database schema changes. Migration 0078
+  (the PostgreSQL 18 / auto-field modernization) carries the generated `search_text`
+  column, the `BigAutoField` PK+FK conversions, and the `db_default` additions.
 - **The `FileImportMessgaes` model name has a typo** (should be "Messages"). Renaming it
   requires a migration and updates across models, admin, views, and tests. Leave it unless
   explicitly tasked to fix it.
