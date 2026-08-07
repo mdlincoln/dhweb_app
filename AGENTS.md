@@ -210,6 +210,15 @@ Keyword, Topic, etc.). These are invoked from the editor views.
 - **Autocomplete:** django-autocomplete-light (`dal`) is used extensively. Autocomplete
   views are defined in `views.py` and routed in `urls.py` (e.g. `author-autocomplete`,
   `keyword-autocomplete`). Forms use `ModelSelect2` / `ModelSelect2Multiple`.
+- **Authentication / staff access:** `LoginRequiredMiddleware` enforces login site-wide
+  (anonymous users hitting a protected view are redirected to `LOGIN_URL` with `?next=…`).
+  Publicly readable views are exempted via `cache_for_anon` (it sets `login_required = False`
+  using `functools.wraps`) or, for the few not cache-wrapped, an explicit `@login_not_required`
+  (public downloads, sitemaps, flatpages). Staff-only editor views use the
+  `UserPassesTestMixin`-based `StaffRequiredMixin` (CBVs) or the `@user_is_staff` decorator
+  (merge FBVs); both redirect authenticated non-staff users to `home_view` with the
+  `PERMISSIONS_ERROR_TEXT` warning. `XMLView` keeps its own `LoginRequiredMixin` so work XML
+  stays login-gated.
 - **Static assets:** SCSS compiled via django-compressor + libsass. Run
   `collectstatic` on deploy (`make deploy` handles this).
 - **`DEFAULT_AUTO_FIELD`** is `BigAutoField` (with explicit `id = models.BigAutoField(primary_key=True)`
@@ -357,33 +366,28 @@ definitions in `DENORMALIZED_HEADERS`.
 The following opportunities for adopting newer Django features remain **not** implemented yet
 and would each require careful design, testing, and potentially migrations.
 
-1. **`LoginRequiredMiddleware` (Django 4.0+)**: The custom `user_is_staff` decorator in
-   `views.py` could be replaced or simplified using `LoginRequiredMiddleware` combined with
-   Django's built-in `PermissionRequiredMixin` / `UserPassesTestMixin`, reducing custom auth
-   boilerplate. The `StaffRequiredMixin` pattern could use middleware-level enforcement.
-
-2. **`STORAGES` setting (Django 4.2+)**: The `FILER_STORAGES` dict (`settings.py`) and the
+1. **`STORAGES` setting (Django 4.2+)**: The `FILER_STORAGES` dict (`settings.py`) and the
    implicit default static/file storage backends could be consolidated into Django 4.2+'s
    unified `STORAGES` setting, which provides a cleaner configuration interface and supports
    multiple named storage backends.
 
-3. **`Model.choices` with Python `enum` (Django 5.0+)**: Model fields using choices tuples
+2. **`Model.choices` with Python `enum` (Django 5.0+)**: Model fields using choices tuples
    (e.g., `WorkType`, `License`) could be refactored to use `enum` classes with
    `models.Field.choices`, providing better type safety and IDE support.
 
-4. **Async views and ORM (Django 3.1+ / 4.2+)**: Views that perform I/O-bound work (e.g.,
+3. **Async views and ORM (Django 3.1+ / 4.2+)**: Views that perform I/O-bound work (e.g.,
    the TEI XML import, CSV export, Internet Archive loading in `ia_load.py`) could be
    converted to async views using `async def` and async ORM methods (`adelete()`,
    `acreate()`, `aget()`). This would improve throughput for concurrent requests during
    long-running operations.
 
-5. **Fix `make nightly`**: The broken `make nightly` target (calling nonexistent
+4. **Fix `make nightly`**: The broken `make nightly` target (calling nonexistent
    `regenerate_text_indices` and `export_all_csv`) could be fixed to use the actual
    `export_tables` command. With `GeneratedField` adoption, the text index regeneration
    would become automatic, potentially eliminating the need for a nightly regeneration
    command entirely.
 
-6. **Fix email env var mismatch**: The `EMAIL_ADDRESS` vs `DEFAULT_FROM_EMAIL` mismatch
+5. **Fix email env var mismatch**: The `EMAIL_ADDRESS` vs `DEFAULT_FROM_EMAIL` mismatch
    in `.env.template` and the missing `=` on `EMAIL_PORT` are pre-existing issues that
    could be addressed alongside the settings.py changes.
 

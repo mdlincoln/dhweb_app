@@ -22,8 +22,8 @@ from django.contrib.postgres.aggregates import StringAgg
 from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import login_not_required
 from dal.autocomplete import Select2QuerySetView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from django.db import transaction, IntegrityError
@@ -37,6 +37,7 @@ from datetime import datetime
 from operator import attrgetter
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 import zipfile
+import functools
 from . import models
 
 from .models import (
@@ -90,43 +91,51 @@ PERMISSIONS_ERROR_TEXT = (
 
 
 def cache_for_anon(func):
-    """
-    On these views, call the cache if the user is not authenticated
+    """For anonymous users, serve the cached response; authenticated users bypass cache.
+
+    Views wrapped here are publicly readable, so they are exempt from
+    LoginRequiredMiddleware.
     """
 
+    @functools.wraps(func)
     def wrap(request, *args, **kwargs):
         if request.user.is_authenticated:
             return func(request, *args, **kwargs)
-        else:
-            return cache_page(settings.CACHES["default"]["TIMEOUT"])(func)(
-                request, *args, **kwargs
-            )
+        return cache_page(settings.CACHES["default"]["TIMEOUT"])(func)(
+            request, *args, **kwargs
+        )
 
+    wrap.login_required = False
     return wrap
 
 
 def user_is_staff(func):
+    """Require a staff user; non-staff are redirected home with a warning.
+
+    Anonymous users are handled by LoginRequiredMiddleware.
+    """
+
     def wrap(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect(f"{reverse('login')}?next={request.path}")
-        if request.user.is_staff:
-            return func(request, *args, **kwargs)
-        else:
+        if not request.user.is_staff:
             messages.warning(request, PERMISSIONS_ERROR_TEXT)
             return redirect("home_view")
+        return func(request, *args, **kwargs)
 
     return wrap
 
 
-class StaffRequiredMixin:
-    def dispatch(self, *args, **kwargs):
-        if not self.request.user.is_authenticated:
-            return redirect(f"{reverse('login')}?next={self.request.path}")
-        if self.request.user.is_staff:
-            return super().dispatch(*args, **kwargs)
-        else:
-            messages.warning(self.request, PERMISSIONS_ERROR_TEXT)
-            return redirect("home_view")
+class StaffRequiredMixin(UserPassesTestMixin):
+    """Require an authenticated staff user; non-staff are redirected home with a warning.
+
+    Anonymous users are handled by LoginRequiredMiddleware (redirect to login).
+    """
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def handle_no_permission(self):
+        messages.warning(self.request, PERMISSIONS_ERROR_TEXT)
+        return redirect("home_view")
 
 
 class ItemLabelAutocomplete(Select2QuerySetView):
@@ -983,26 +992,26 @@ def download_data(request):
     return render(request, "downloads.html", context)
 
 
+@login_not_required
 def download_works_csv(request):
     target_zip = f"{settings.DATA_OUTPUT_PATH}/{settings.DENORMALIZED_WORKS_NAME}.zip"
     response = FileResponse(open(target_zip, "rb"))
     return response
 
 
+@login_not_required
 def public_download_all_tables(request):
     target_zip = f"{settings.DATA_OUTPUT_PATH}/{settings.PUBLIC_DATA_TABLE_CONFIG['DATA_ZIP_NAME']}"
     response = FileResponse(open(target_zip, "rb"))
     return response
 
 
-@login_required
 def private_download_all_tables(request):
     target_zip = f"{settings.DATA_OUTPUT_PATH}/{settings.PRIVATE_DATA_TABLE_CONFIG['DATA_ZIP_NAME']}"
     response = FileResponse(open(target_zip, "rb"))
     return response
 
 
-@login_required
 def WorkCreate(request):
     if request.method == "GET":
         if "conference" in request.GET:
@@ -1026,7 +1035,6 @@ def WorkCreate(request):
     return render(request, "work_create.html", context)
 
 
-@login_required
 def WorkEdit(request, work_id):
     work = get_object_or_404(Work, pk=work_id)
 
@@ -1046,7 +1054,6 @@ def WorkEdit(request, work_id):
     return render(request, "work_edit.html", context)
 
 
-@login_required
 @transaction.atomic
 def WorkEditAuthorship(request, work_id):
     work = get_object_or_404(Work, pk=work_id)
@@ -1139,7 +1146,6 @@ def WorkEditAuthorship(request, work_id):
     return render(request, "work_edit_authorships.html", context)
 
 
-@login_required
 def AuthorInfoJSON(request, author_id):
     if request.method == "GET":
         author = get_object_or_404(Author, pk=author_id)
@@ -1157,7 +1163,6 @@ def AuthorInfoJSON(request, author_id):
         return JsonResponse(author_dict)
 
 
-@login_required
 def AffiliationInfoJSON(request, affiliation_id):
     if request.method == "GET":
         affiliation = get_object_or_404(Affiliation, pk=affiliation_id)
@@ -1172,7 +1177,7 @@ def AffiliationInfoJSON(request, affiliation_id):
         return JsonResponse(affiliation_dict)
 
 
-class WorkDelete(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+class WorkDelete(SuccessMessageMixin, DeleteView):
     model = Work
     template_name = "work_delete.html"
     extra_context = {"cancel_view": "work_list"}
@@ -1368,7 +1373,7 @@ class FullWorkList(ListView):
         return context
 
 
-class FullInstitutionList(LoginRequiredMixin, ListView):
+class FullInstitutionList(ListView):
     context_object_name = "institution_list"
     template_name = "full_institution_list.html"
     paginate_by = 10
@@ -1522,7 +1527,7 @@ class AuthorInstitutionList(FullInstitutionList):
         return context
 
 
-class InstitutionEdit(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class InstitutionEdit(SuccessMessageMixin, UpdateView):
     model = Institution
     template_name = "generic_form.html"
     fields = ["name", "city", "state_province_region", "country"]
@@ -1541,7 +1546,7 @@ class InstitutionEdit(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         return response
 
 
-class InstitutionCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class InstitutionCreate(SuccessMessageMixin, CreateView):
     model = Institution
     template_name = "generic_form.html"
     fields = ["name", "city", "state_province_region", "country"]
@@ -1643,7 +1648,7 @@ def institution_multi_merge(request):
     return render(request, "institution_multi_merge.html", context)
 
 
-class AffiliationEdit(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class AffiliationEdit(SuccessMessageMixin, UpdateView):
     model = Affiliation
     template_name = "generic_form.html"
     form_class = AffiliationEditForm
@@ -1656,7 +1661,7 @@ class AffiliationEdit(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     success_url = reverse_lazy("full_institution_list")
 
 
-class AffiliationCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class AffiliationCreate(SuccessMessageMixin, CreateView):
     model = Affiliation
     template_name = "generic_form.html"
     form_class = AffiliationEditForm
@@ -1676,7 +1681,6 @@ class AffiliationCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         return self.initial
 
 
-@login_required
 def ajax_affiliation_create(request):
     newaff = Affiliation.objects.get_or_create(
         department=request.POST["department"],
@@ -1988,7 +1992,6 @@ class ConferenceXMLLoad(StaffRequiredMixin, DetailView):
             )
 
 
-@login_required
 @transaction.atomic
 def conference_checkout(request, conference_id):
     conference = get_object_or_404(Conference, pk=conference_id)
@@ -2121,13 +2124,13 @@ class OrganizerDelete(StaffRequiredMixin, SuccessMessageMixin, DeleteView):
         return self.success_message % self.object.__dict__
 
 
-class OrganizerList(LoginRequiredMixin, ListView):
+class OrganizerList(ListView):
     model = Organizer
     template_name = "full_organizer_list.html"
     context_object_name = "organizer_list"
 
 
-class KeywordCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class KeywordCreate(SuccessMessageMixin, CreateView):
     model = Keyword
     template_name = "generic_form.html"
     extra_context = {"form_title": "Create keyword", "cancel_view": "full_keyword_list"}
@@ -2161,7 +2164,7 @@ class KeywordEdit(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
     success_url = reverse_lazy("full_keyword_list")
 
 
-class KeywordList(LoginRequiredMixin, ListView):
+class KeywordList(ListView):
     model = Keyword
     template_name = "tag_list.html"
     context_object_name = "tag_list"
@@ -2304,7 +2307,7 @@ def keyword_multi_merge(request):
     return render(request, "tag_multi_merge.html", context)
 
 
-class TopicCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class TopicCreate(SuccessMessageMixin, CreateView):
     model = Topic
     template_name = "generic_form.html"
     extra_context = {"form_title": "Create topic", "cancel_view": "full_topic_list"}
@@ -2324,7 +2327,7 @@ class TopicDelete(StaffRequiredMixin, SuccessMessageMixin, DeleteView):
         return self.success_message % self.object.__dict__
 
 
-class TopicEdit(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class TopicEdit(SuccessMessageMixin, UpdateView):
     model = Topic
     template_name = "generic_form.html"
     extra_context = {
@@ -2338,7 +2341,7 @@ class TopicEdit(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     success_url = reverse_lazy("full_topic_list")
 
 
-class TopicList(LoginRequiredMixin, ListView):
+class TopicList(ListView):
     model = Topic
     template_name = "tag_list.html"
     context_object_name = "tag_list"
@@ -2473,7 +2476,7 @@ def topic_multi_merge(request):
     return render(request, "tag_multi_merge.html", context)
 
 
-class LanguageCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class LanguageCreate(SuccessMessageMixin, CreateView):
     model = Language
     template_name = "generic_form.html"
     extra_context = {
@@ -2513,7 +2516,7 @@ class LanguageEdit(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
     success_url = reverse_lazy("full_language_list")
 
 
-class LanguageList(LoginRequiredMixin, ListView):
+class LanguageList(ListView):
     model = Language
     template_name = "tag_list.html"
     context_object_name = "tag_list"
@@ -2651,7 +2654,7 @@ class WorkTypeEdit(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
     success_url = reverse_lazy("full_work_type_list")
 
 
-class WorkTypeList(LoginRequiredMixin, ListView):
+class WorkTypeList(ListView):
     model = WorkType
     template_name = "tag_list.html"
     context_object_name = "tag_list"

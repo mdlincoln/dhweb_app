@@ -1,0 +1,5 @@
+version: 2
+allow:
+- tool: web_fetch
+  args:
+    url: https://raw.githubusercontent.com/django/django/5.2/django/contrib/auth/mixins.py{,/**}

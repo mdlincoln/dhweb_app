@@ -17,11 +17,13 @@ Including another URLconf
 from datetime import datetime
 
 from django.contrib import admin
+from django.contrib.auth.decorators import login_not_required
+from django.contrib.flatpages import views as flatpage_views
 from django.contrib.flatpages.models import FlatPage
 from django.contrib.sitemaps import GenericSitemap, Sitemap
 from django.contrib.sitemaps.views import index, sitemap
 from django.db.models import QuerySet
-from django.urls import include, path, reverse
+from django.urls import include, path, re_path, reverse
 
 from abstracts import models
 
@@ -83,11 +85,17 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("django.contrib.auth.urls")),
     path("filer/", include("filer.urls")),
-    path("pages/", include("django.contrib.flatpages.urls")),
-    path("sitemap.xml", index, dh_sitemaps),
+    re_path(
+        r"^pages/(?P<url>.*/)$",
+        login_not_required(flatpage_views.flatpage),
+        name="django.contrib.flatpages.views.flatpage",
+    ),
+    # Admin and filer handle their own auth; the sitemap views are publicly
+    # readable, so exempt them from LoginRequiredMiddleware.
+    path("sitemap.xml", login_not_required(index), dh_sitemaps),
     path(
         "sitemap-<section>.xml",
-        sitemap,
+        login_not_required(sitemap),
         dh_sitemaps,
         name="django.contrib.sitemaps.views.sitemap",
     ),

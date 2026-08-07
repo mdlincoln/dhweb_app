@@ -2,6 +2,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.core.cache import cache
+from django.contrib.auth import get_user_model
 import json
 
 from abstracts.models import (
@@ -21,6 +22,8 @@ from abstracts.models import (
 )
 
 from abstracts.forms import WorkFilter
+
+from abstracts.views import PERMISSIONS_ERROR_TEXT
 
 
 class CachelessTestCase(TestCase):
@@ -1429,3 +1432,84 @@ class CreateWorkTest(CachelessTestCase):
             follow=True,
         )
         self.assertContains(res, "created")
+
+
+class StaffAccessTest(CachelessTestCase):
+    """Staff-gated routes redirect authenticated non-staff users home with a warning.
+
+    LoginRequiredMiddleware handles anonymous users (redirect to login); the
+    UserPassesTestMixin-based StaffRequiredMixin (CBVs) and @user_is_staff
+    decorator (FBVs) handle the authenticated non-staff case.
+    """
+
+    fixtures = ["test.json"]
+
+    def setUp(self):
+        super().setUp()
+        User = get_user_model()
+        self.non_staff = User.objects.create_user(
+            username="nonstaff", password="pw", is_staff=False
+        )
+
+    def test_non_staff_redirected_from_staff_cbv(self):
+        # Exercises the StaffRequiredMixin -> UserPassesTestMixin CBV path
+        # (ConferenceCreate, a StaffRequiredMixin CBV). A GET by a non-staff user
+        # redirects via handle_no_permission before any form processing.
+        self.client.force_login(self.non_staff)
+        url = reverse("conference_create")
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(res["Location"], reverse("home_view"))
+        from django.contrib.messages import get_messages
+
+        self.assertIn(
+            PERMISSIONS_ERROR_TEXT,
+            [m.message for m in get_messages(res.wsgi_request)],
+        )
+
+    def test_non_staff_redirected_from_staff_fbv(self):
+        # Exercises the @user_is_staff decorator path (author_merge_view FBV).
+        self.client.force_login(self.non_staff)
+        url = reverse("author_merge", kwargs={"author_id": 1})
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(res["Location"], reverse("home_view"))
+        from django.contrib.messages import get_messages
+
+        self.assertIn(
+            PERMISSIONS_ERROR_TEXT,
+            [m.message for m in get_messages(res.wsgi_request)],
+        )
+
+    def test_anonymous_redirected_to_login(self):
+        # Sanity check that middleware still gates anonymous users. Use follow=True
+        # so the redirect chain (302 -> APPEND_SLASH -> login page) resolves before
+        # assertRedirects inspects it, matching the established privately_available
+        # pattern (which would otherwise trip over the /accounts/login 301).
+        url = reverse("conference_edit", kwargs={"pk": 1})
+        res = self.client.get(url, follow=True)
+        self.assertRedirects(res, f"{reverse('login')}?next={url}")
+
+    def test_public_view_remains_anonymous(self):
+        # A cache_for_anon public view stays accessible without login.
+        self.assertEqual(self.client.get(reverse("home_view")).status_code, 200)
+
+    def test_autocomplete_remains_anonymous(self):
+        # Preserve the currently-anonymous autocomplete behavior.
+        self.assertEqual(self.client.get(reverse("work-autocomplete")).status_code, 200)
+
+    def test_public_downloads_remain_anonymous(self):
+        # The two @login_not_required public downloads must NOT be login-gated by
+        # the middleware. They serve FileResponse from a ZIP on disk that may be
+        # absent in the test environment (same root cause as the pre-existing
+        # DownloadPageTest.test_render failure), yielding HTTP 500, not 302.
+        # Raising the client's raise_request_exception flag off lets us inspect
+        # that 500 response instead of the client re-raising the FileNotFoundError.
+        # The important assertion is that anonymous access is NOT redirected to
+        # login (not 302).
+        self.client.raise_request_exception = False
+        res = self.client.get(reverse("works_download"))
+        self.assertNotEqual(res.status_code, 302)
+        res2 = self.client.get(reverse("public_all_tables_download"))
+        self.assertNotEqual(res2.status_code, 302)
+        self.client.raise_request_exception = True
