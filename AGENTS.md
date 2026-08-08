@@ -45,8 +45,9 @@ and `django-coverage-plugin` are in `pyproject.toml` dependencies and available 
 
 ```
 .
-├── docker-compose.yml          # Orchestrates postgres, app, redis, nginx
-├── Dockerfile                  # App image build (uv-based)
+├── docker-compose.yml          # Dev infra only: postgres + redis (published to localhost)
+├── docker-compose.prod.yml     # Production stack: app + nginx + redis + postgres
+├── Dockerfile                  # App image build (uv-based) — feeds the prod compose file
 ├── pyproject.toml              # PEP 621 dependency spec (uv)
 ├── uv.lock                     # Locked dependency manifest (uv)
 ├── .dockerignore               # Docker build context exclusions
@@ -79,16 +80,23 @@ and `django-coverage-plugin` are in `pyproject.toml` dependencies and available 
 
 ## Setup & Running
 
-Everything runs through Docker Compose via the `Makefile`.
+This is a **host-first** development workflow. Local development runs Django directly on
+the host via `uv run ...`; Docker Compose runs only the Postgres and Redis backing
+services (ports published to localhost). The full app stack
+(`docker-compose.prod.yml`) is reserved for production deployments.
 
 1. Copy `.env.template` → `.env` and fill in `POSTGRES_PASSWORD`, `POSTGRES_USER`,
    `POSTGRES_DB`, `DH_SECRET`, and `ALLOWED_HOSTS`.
-2. `make` (or `make detached` for background) — builds and starts all services.
-3. `make migrate` — apply database migrations.
-4. The app is served at `http://localhost` (nginx) or `:8000` directly in dev.
+2. Install dependencies: `uv sync` from the repo root.
+3. Start the backing services: `make infra` (Postgres + Redis). `docker compose up -d`
+   on existing volumes is a no-op if already running.
+4. Apply migrations: `make migrate`.
+5. Start the host Django dev server with debug enabled: `make local` — serves at
+   `http://localhost:8000` (debug toolbar visible with `DEBUG_STATUS=True`).
 
-For local dev, `SERVE_COMMAND` defaults to `python manage.py runserver 0.0.0.0:8000`
-and `DEBUG_STATUS=True`.
+For production, use the `docker-compose.prod.yml` targets (see "Common Makefile
+Targets"); `SERVE_COMMAND` defaults to `python manage.py runserver 0.0.0.0:8000` and
+`DEBUG_STATUS=True`, but is set to a gunicorn command in production.
 
 ### Environment Variables
 
@@ -105,34 +113,36 @@ are read from `.env`:
 
 | Target          | Action                                                        |
 | --------------- | ------------------------------------------------------------- |
-| `make`          | `docker-compose up`                                           |
-| `make detached` | `docker-compose up -d`                                        |
-| `make stop`     | Stop the app container                                        |
-| `make down`     | Tear down all containers                                      |
-| `make attach`   | `exec bash` into the app container                            |
-| `make db`       | Open `psql` into postgres (user `dh`)                          |
-| `make restart`  | `docker-compose restart app nginx redis`                  |
-| `make migrate`  | Run `manage.py migrate`                                       |
-| `make deploy`   | migrate + collectstatic + restart                              |
-| `make rebuild`  | Rebuild app & nginx images without cache                      |
-| `make wipe`     | Drop & recreate the `dh` database, then migrate (fresh slate) |
-| `make blank`    | Drop the `dh` database (internal helper used by `wipe`/`restore`) |
-| `make backup`   | `pg_dump` to `data/backup.sql`                               |
-| `make restore`  | Restore `data/backup.sql`                                     |
-| `make test`     | Run test suite with `--parallel 4` (⚠️ see note below)            |
-| `make coverage` | Run tests under coverage, generate HTML report                |
-| `make check`    | `manage.py check`                                             |
+| `make`          | Start dev infra only: `docker compose up -d postgres redis`     |
+| `make infra`    | Start dev infra (Postgres + Redis); prerequisite of migrate/test/etc. |
+| `make local`    | Run the host Django dev server (`uv run` runserver, DEBUG on)  |
+| `make detached` | Start dev infra in the background (same as `infra`)            |
+| `make stop`     | Stop app & nginx (prod stack, `docker-compose.prod.yml`)       |
+| `make down`     | Tear down dev infra containers                                 |
+| `make attach`   | `exec bash` into the prod app container                        |
+| `make db`       | Open `psql` into postgres (user/db from `.env`)                |
+| `make restart`  | `docker compose restart app nginx redis` (prod)                |
+| `make migrate`  | Run `manage.py migrate` on the host (dev)                      |
+| `make deploy`   | Prod migrate + collectstatic + restart (inside prod app container) |
+| `make rebuild`  | Rebuild app & nginx images without cache (prod)                |
+| `make wipe`     | Drop & recreate the database, then migrate (fresh slate)       |
+| `make blank`    | Drop the database (internal helper used by `wipe`/`restore`)   |
+| `make backup`   | `pg_dump` to `data/backup.sql`                                 |
+| `make restore`  | Restore `data/backup.sql`                                      |
+| `make test`     | Run test suite on host with `--parallel 4` (⚠️ see note below)   |
+| `make test-serial` | Run test suite on host serially (no `--parallel`)             |
+| `make coverage` | Run tests under coverage, generate HTML report                 |
+| `make check`    | `manage.py check`                                              |
 | `make dumptest` | Dump test fixture to `abstracts/fixtures/test.json`           |
 | `make loadtest` | Wipe + load the test fixture                                  |
-| `make nightly`  | ⚠️ **Broken** — calls `regenerate_text_indices` + `export_all_csv`, neither of which exists as a management command. The working export command is `export_tables`. |
+| `make nightly`  | Run the `export_tables` command                                |
 
-All `manage.py` commands run inside the `app` container. To run an arbitrary command:
-
-```bash
-make attach
-# then inside the container:
-python manage.py <command>
-```
+Dev targets (`migrate`, `test`, `test-serial`, `dumptest`, `wipe`, `backup`, `restore`,
+`local`, etc.) run Django **on the host** via `uv run --env-file ../.env` and auto-start
+dev infra through the `infra` prerequisite. Prod targets (`deploy`, `rebuild`,
+`restart`, `attach`, `stop`) reference `docker-compose.prod.yml`. To run an arbitrary
+command on the host (dev): `cd dh_abstracts && uv run --env-file ../.env python
+manage.py <command>`.
 
 ## Testing
 
@@ -145,8 +155,9 @@ python manage.py <command>
 - ⚠️ **Parallel test runner note:** `make test` uses `--parallel 4`. On Python 3.12 with
   lxml 5.x, the `test_invalid_tei` test raises an `lxml.etree.XMLSchemaParseError` whose
   exception object cannot be pickled across process boundaries, causing the parallel
-  runner to crash. If this occurs, run `docker-compose exec app python manage.py test`
-  (without `--parallel`) instead. The test itself passes when run serially.
+  runner to crash. If this occurs, run `make test-serial` (or
+  `cd dh_abstracts && uv run --env-file ../.env python manage.py test` without
+  `--parallel`) instead. The test itself passes when run serially.
 - Regenerate the test fixture after model/data changes: `make wipe && make dumptest`.
 - Load testing uses Locust (`locust/locustfile.py`); it requires `data/all_ids.json`,
   produced by `python manage.py dump_ids`.
@@ -159,9 +170,9 @@ python manage.py <command>
   - `EditConferenceViewTest.test_post` — same pattern; expects "updated" message.
   - `CreateOrganizerViewTest.test_post` — same pattern; expects "created" message.
   - `CreateWorkTest.test_post` — same pattern; expects "created" message.
-  - `DownloadPageTest.test_render` — `FileNotFoundError: '/vol/data/dh_conferences_works.zip'`;
-    the download page view expects a pre-generated zip file that does not exist in the test
-    environment.
+  - `DownloadPageTest.test_render` — the download page view expects a pre-generated zip
+    file that does not exist in the test environment, raising `FileNotFoundError` on a
+    path derived from `DATA_OUTPUT_PATH` (`.eg <repo>/data/dh_conferences_works.zip`).
   
   When these failures are investigated and fixed, **update this section of AGENTS.md** to
   reflect the current test state.
@@ -248,8 +259,9 @@ Keyword, Topic, etc.). These are invoked from the editor views.
   - `django.contrib.humanize`
   - `django.contrib.postgres` (see PostgreSQL note above)
 - **Other config:** `LOGIN_URL = "/accounts/login"` (login URL for staff-gated editor
-  routes). `DATA_OUTPUT_PATH = "/vol/data"` (in-container path where CSV exports are
-  written).
+  routes). `STATIC_ROOT` (default `<repo>/staticfiles`) and `DATA_OUTPUT_PATH` (default
+  `<repo>/data`) are host-first paths where static assets and CSV exports are written;
+  the prod compose file overrides both to their `/vol/...` container paths.
 
 ## Type Checking
 
@@ -336,8 +348,8 @@ Dependencies are managed with [uv](https://docs.astral.sh/uv/):
 
 ## Management Commands
 
-Located in `abstracts/management/commands/`. Run via
-`docker-compose exec app python manage.py <command>`.
+Located in `abstracts/management/commands/`. On the host (dev) run via
+`cd dh_abstracts && uv run --env-file ../.env python manage.py <command>`.
 
 | Command              | Purpose                                                        |
 | -------------------- | -------------------------------------------------------------- |
@@ -381,11 +393,11 @@ and would each require careful design, testing, and potentially migrations.
    `acreate()`, `aget()`). This would improve throughput for concurrent requests during
    long-running operations.
 
-3. **Fix `make nightly`**: The broken `make nightly` target (calling nonexistent
-   `regenerate_text_indices` and `export_all_csv`) could be fixed to use the actual
-   `export_tables` command. With `GeneratedField` adoption, the text index regeneration
-   would become automatic, potentially eliminating the need for a nightly regeneration
-   command entirely.
+3. **Nightly text-index regeneration**: `make nightly` now runs the real
+   `export_tables` command. If a nightly text-index regeneration is still desired, it
+   could be re-added as a separate command; with `GeneratedField` adoption, text-index
+   regeneration would become automatic, potentially eliminating the need for a nightly
+   regeneration command entirely.
 
 4. **Fix email env var mismatch**: The `EMAIL_ADDRESS` vs `DEFAULT_FROM_EMAIL` mismatch
    in `.env.template` and the missing `=` on `EMAIL_PORT` are pre-existing issues that
@@ -410,9 +422,16 @@ and would each require careful design, testing, and potentially migrations.
 - **Environment variables are required at runtime.** `settings.py` reads
   `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` directly from `os.environ` (no
   defaults) — the app will not start without a valid `.env`.
-- **`make nightly` is currently broken.** It calls `regenerate_text_indices` and
-  `export_all_csv`, neither of which exists as a management command. The working export
-  command is `export_tables`. This is a known issue, not yet fixed.
+- **`make nightly` runs `export_tables`.** It no longer calls the nonexistent
+  `regenerate_text_indices` / `export_all_csv` commands.
+- **Shared `db` volume across dev/prod compose files.** Both `docker-compose.yml` and
+  `docker-compose.prod.yml` use the same `db` named volume, so dev and prod both see the
+  same Postgres data. `docker compose down` (dev) leaves the volume intact; the prod
+  file reuses it. This is intentional.
+- **Port conflicts.** The dev compose publishes Postgres on 5432 and Redis on 6379. If
+  the host already runs either service on those ports, the bindings fail; edit the
+  `ports:` mapping in `docker-compose.yml` and set `POSTGRES_HOST`/`POSTGRES_PORT` or
+  `REDIS_URL` in `.env` accordingly (settings are env-driven).
 - **Email env var mismatch.** `settings.py` reads `os.environ.get("EMAIL_ADDRESS")` for
   `DEFAULT_FROM_EMAIL`, but `.env.template` provides `DEFAULT_FROM_EMAIL=` (mismatched
   name). Additionally, `.env.template` has `EMAIL_PORT` with no `=` sign (invalid

@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.conf import settings
 from django.core.files.storage import default_storage, storages
 
 
@@ -28,4 +29,6 @@ class StorageConfigTest(TestCase):
         from filer.storage import PublicFileSystemStorage
 
         self.assertIsInstance(FILER_PUBLICMEDIA_STORAGE, PublicFileSystemStorage)
-        self.assertEqual(FILER_PUBLICMEDIA_STORAGE.location, "/vol/static_files/media")
+        self.assertEqual(
+            FILER_PUBLICMEDIA_STORAGE.location, f"{settings.STATIC_ROOT}/media"
+        )

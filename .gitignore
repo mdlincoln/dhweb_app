@@ -12,6 +12,7 @@ nginx/
 .coverage
 htmlcov/
 xml/
+staticfiles/
 
 .idea
 env.*

@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.conf import settings
 from abstracts import models
 import json
 
@@ -29,4 +30,4 @@ class Command(BaseCommand):
             ),
         }
 
-        json.dump(all_ids, open("/vol/data/all_ids.json", "w"))
+        json.dump(all_ids, open(f"{settings.DATA_OUTPUT_PATH}/all_ids.json", "w"))

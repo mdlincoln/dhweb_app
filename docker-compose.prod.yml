@@ -1,0 +1,70 @@
+# Production application stack: postgres + app + redis + nginx.
+#
+# This is the full 4-service stack (formerly the whole of docker-compose.yml).
+# The dev compose file (docker-compose.yml) now runs only postgres + redis for
+# host-first local development; this file is used for deployments via the
+# prod Makefile targets (deploy, rebuild, restart, attach, stop).
+#
+# The app service carries explicit `environment:` overrides that shadow the
+# shared .env file values with container-internal settings, matching the
+# settings.py host-first defaults to the container's networking and paths.
+services:
+  postgres:
+    image: postgres:18
+    volumes:
+      - db:/var/lib/postgresql
+    expose:
+      - 5432
+    env_file: .env
+
+  app:
+    build: .
+    restart: always
+    command: "${SERVE_COMMAND}"
+    volumes:
+      - ./dh_abstracts:/vol/dh
+      - static:/vol/static_files
+      - ./data:/vol/data
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379
+      STATIC_ROOT: /vol/static_files
+      DATA_OUTPUT_PATH: /vol/data
+    expose:
+      - 8000
+    ports:
+      - "25:25"
+    links:
+      - "postgres:postgres"
+      - "redis:redis"
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+
+  redis:
+    image: redis:7.4
+    restart: always
+    expose:
+      - 6379
+    command: redis-server --save "" --appendonly no
+
+  nginx:
+    image: nginx:1.22.0
+    restart: always
+    volumes:
+      - ./nginx:/etc/nginx/conf.d/.
+      - ./data:/var/log/nginx
+      - static:/vol/static_files
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: .env
+    links:
+      - "app:app"
+    depends_on:
+      - app
+
+volumes:
+  db: null
+  static: null

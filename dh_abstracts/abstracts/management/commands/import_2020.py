@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.conf import settings
 from abstracts import models
 import re
 import csv
@@ -13,7 +14,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        with open("/vol/data/metadata_V4.csv", "r") as csvfile:
+        with open(f"{settings.DATA_OUTPUT_PATH}/metadata_V4.csv", "r") as csvfile:
             reader = csv.DictReader(csvfile)
             adho2020 = models.Conference.objects.get(id=495)
             # Delete handful of hand-entered papers

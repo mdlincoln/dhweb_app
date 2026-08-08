@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.conf import settings
 from abstracts import models
 import json
 from django.db import transaction
@@ -14,7 +15,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        # all_xmls = glob("/vol/data/xml/*.xml")
+        # all_xmls = glob("{base}/xml/*.xml")
         # output_list = []
         # for x in all_xmls:
         #     root = etree.parse(x)
@@ -27,9 +28,11 @@ class Command(BaseCommand):
         #         root.find("//{http://www.tei-c.org/ns/1.0}text")
         #     ).decode("utf-8")
         #     output_list.append({"title": title, "full_text": full_text})
-        # json.dump(output_list, open("/vol/data/ft2016.json", "w"))
+        # json.dump(output_list, open("{base}/ft2016.json", "w"))
 
-        all_texts = json.load(open("/vol/data/ft2016.json", "r"))
+        all_texts = json.load(
+            open(f"{settings.DATA_OUTPUT_PATH}/ft2016.json", "r")
+        )
         adho2016 = models.Conference.objects.get(id=17)
         for t in all_texts:
             # find closest match:

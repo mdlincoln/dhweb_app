@@ -127,8 +127,11 @@ DATABASES = {
         "NAME": os.environ["POSTGRES_DB"],
         "USER": os.environ["POSTGRES_USER"],
         "PASSWORD": os.environ["POSTGRES_PASSWORD"],
-        "HOST": os.environ["POSTGRES_HOST"],
-        "PORT": 5432,
+        # Host-first defaults: local dev runs Django on the host against
+        # compose-published Postgres on localhost. The prod compose file
+        # overrides POSTGRES_HOST=postgres to restore container networking.
+        "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
+        "PORT": os.environ.get("POSTGRES_PORT", 5432),
     }
 }
 
@@ -136,7 +139,8 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://redis:6379",
+        # Host-first default; the prod compose file overrides REDIS_URL.
+        "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379"),
         "TIMEOUT": 60 * 10,
     }
 }
@@ -173,7 +177,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = "/static/"
-STATIC_ROOT = f"{os.environ['STATIC_ASSETS_PATH']}"
+# Host-first default: <repo>/staticfiles (gitignored). The prod compose file
+# overrides STATIC_ROOT back to the container's static path.
+STATIC_ROOT = os.path.normpath(
+    os.environ.get("STATIC_ROOT", os.path.join(BASE_DIR, "..", "staticfiles"))
+)
 
 # Storage backends (Django 4.2+ unified STORAGES setting).
 # Makes the implicit Django defaults explicit. django-filer reads
@@ -194,7 +202,11 @@ STORAGES = {
 LOGIN_URL = "/accounts/login"
 LOGIN_REDIRECT_URL = "/"
 
-DATA_OUTPUT_PATH = f"{os.environ['DATA_OUTPUT_PATH']}"
+# Host-first default: <repo>/data (gitignored). The prod compose file
+# overrides DATA_OUTPUT_PATH back to the container's data path.
+DATA_OUTPUT_PATH = os.path.normpath(
+    os.environ.get("DATA_OUTPUT_PATH", os.path.join(BASE_DIR, "..", "data"))
+)
 
 DENORMALIZED_WORKS_NAME = "dh_conferences_works"
 

@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.conf import settings
 from abstracts import models
 import csv
 from django.db import transaction
@@ -140,7 +141,7 @@ class Command(BaseCommand):
             res = models.Topic.objects.get_or_create(title=t)
             print(res)
 
-        with open("/vol/data/metadata_V4.csv", "r") as csvfile:
+        with open(f"{settings.DATA_OUTPUT_PATH}/metadata_V4.csv", "r") as csvfile:
             reader = csv.DictReader(csvfile)
             adho2020 = models.Conference.objects.get(id=495)
             for work in reader:

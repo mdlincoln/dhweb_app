@@ -1,55 +1,27 @@
+# Development infrastructure only: Postgres + Redis.
+#
+# Local dev runs Django directly on the host via `uv run ...` (see the Makefile)
+# against the services below, whose ports are published to localhost. The full
+# application stack (app + nginx + redis + postgres) is defined in
+# docker-compose.prod.yml for production deployments.
+#
+# The `db` named volume is shared with docker-compose.prod.yml, so dev and prod
+# compose both see the same Postgres data.
 services:
   postgres:
     image: postgres:18
     volumes:
       - db:/var/lib/postgresql
-    expose:
-      - 5432
-    env_file: .env
-
-  app:
-    build: .
-    restart: always
-    command: "${SERVE_COMMAND}"
-    volumes:
-      - ./dh_abstracts:/vol/dh
-      - static:/vol/static_files
-      - ./data:/vol/data
-    expose:
-      - 8000
     ports:
-      - "25:25"
-    links:
-      - "postgres:postgres"
-      - "redis:redis"
+      - "5432:5432"
     env_file: .env
-    depends_on:
-      - postgres
-      - redis
 
   redis:
     image: redis:7.4
     restart: always
-    expose:
-      - 6379
-    command: redis-server --save "" --appendonly no
-
-  nginx:
-    image: nginx:1.22.0
-    restart: always
-    volumes:
-      - ./nginx:/etc/nginx/conf.d/.
-      - ./data:/var/log/nginx
-      - static:/vol/static_files
     ports:
-      - "80:80"
-      - "443:443"
-    env_file: .env
-    links:
-      - "app:app"
-    depends_on:
-      - app
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no
 
 volumes:
   db: null
-  static: null

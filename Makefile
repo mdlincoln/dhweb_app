@@ -1,52 +1,66 @@
+COMPOSE_DEV := docker compose
+COMPOSE_PROD := docker compose -f docker-compose.prod.yml
+PY := cd dh_abstracts && uv run --env-file ../.env
+# GNU Make does not read .env files. `docker compose` reads .env itself for the
+# compose services, but the raw `psql`/`pg_dump` exec targets need the values in
+# Make. Read them via a minimal inline parser (avoids `include .env`, which would
+# mis-handle the quoted SERVE_COMMAND='...' value).
+POSTGRES_USER := $(shell grep -E '^POSTGRES_USER=' .env | head -1 | cut -d= -f2-)
+POSTGRES_DB := $(shell grep -E '^POSTGRES_DB=' .env | head -1 | cut -d= -f2-)
+
 all:
-	docker-compose up
+	$(COMPOSE_DEV) up -d postgres redis
+infra: all
 detached:
-	docker-compose up -d
+	$(COMPOSE_DEV) up -d postgres redis
+local: all
+	$(PY) python manage.py runserver 0.0.0.0:8000
 stop:
-	docker-compose stop app
+	$(COMPOSE_PROD) stop app nginx
 down:
-	docker-compose down
+	$(COMPOSE_DEV) down
 attach:
-	docker-compose exec app bash
-db:
-	docker-compose exec postgres psql -U dh
+	$(COMPOSE_PROD) exec app bash
+db: infra
+	$(COMPOSE_DEV) exec postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
 restart:
-	docker-compose restart app nginx redis
-migrate:
-	docker-compose exec app python manage.py migrate
+	$(COMPOSE_PROD) restart app nginx redis
+migrate: infra
+	$(PY) python manage.py migrate
 deploy:
-	$(MAKE) migrate
-	docker-compose exec app python manage.py collectstatic --no-input
+	$(COMPOSE_PROD) exec app python manage.py migrate
+	$(COMPOSE_PROD) exec app python manage.py collectstatic --no-input
 	$(MAKE) restart
 rebuild:
-	docker-compose build --no-cache app nginx
-blank: stop
-	docker-compose exec postgres psql -U dh -d postgres -c 'DROP DATABASE IF EXISTS dh;'
+	$(COMPOSE_PROD) build --no-cache app nginx
+blank: infra
+	$(COMPOSE_DEV) exec postgres psql -U $(POSTGRES_USER) -d postgres -c 'DROP DATABASE IF EXISTS $(POSTGRES_DB);'
 wipe: blank
-	docker-compose exec postgres psql -U dh -d postgres -c 'CREATE DATABASE dh;'
-	$(MAKE) restart
-	$(MAKE) migrate
-backup:
-	docker-compose exec postgres pg_dump -U dh -d dh > data/backup.sql
+	$(COMPOSE_DEV) exec postgres psql -U $(POSTGRES_USER) -d postgres -c 'CREATE DATABASE $(POSTGRES_DB);'
+	$(PY) python manage.py migrate
+backup: infra
+	mkdir -p data
+	$(COMPOSE_DEV) exec postgres pg_dump -U $(POSTGRES_USER) -d $(POSTGRES_DB) > data/backup.sql
 restore: blank
-	docker-compose up -d postgres
-	docker-compose exec -T postgres psql -U dh -d postgres -c 'CREATE DATABASE dh;'
-	docker-compose exec -T postgres psql -U dh dh < data/backup.sql
-	$(MAKE) restart
-dumptest:
-	docker-compose exec app python manage.py dumpdata --indent 2 -e admin.logentry -e auth.permission -e contenttypes -e sessions -o abstracts/fixtures/test.json
+	$(COMPOSE_DEV) up -d postgres
+	mkdir -p data
+	$(COMPOSE_DEV) exec postgres psql -U $(POSTGRES_USER) -d postgres -c 'CREATE DATABASE $(POSTGRES_DB);'
+	$(COMPOSE_DEV) exec -T postgres psql -U $(POSTGRES_USER) $(POSTGRES_DB) < data/backup.sql
+dumptest: infra
+	$(PY) python manage.py dumpdata --indent 2 -e admin.logentry -e auth.permission -e contenttypes -e sessions -o abstracts/fixtures/test.json
 loadtest: wipe
-	docker-compose exec app python manage.py loaddata abstracts/fixtures/test.json
-test:
-	docker-compose exec app python manage.py test --parallel 4
-coverage:
-	-docker-compose exec app coverage run manage.py test
-	docker-compose exec app coverage html
-nightly:
-	docker-compose exec app python manage.py regenerate_text_indices
-	docker-compose exec app python manage.py export_all_csv
+	$(PY) python manage.py loaddata abstracts/fixtures/test.json
+test: infra
+	$(PY) python manage.py test --parallel 4
+test-serial: infra
+	$(PY) python manage.py test
+coverage: infra
+	-$(PY) coverage run manage.py test
+	$(PY) coverage html
+nightly: infra
+	$(PY) python manage.py export_tables
 check:
-	docker-compose exec app python manage.py check
+	$(PY) python manage.py check
 lint:
 	uv run ruff check .
 format:
