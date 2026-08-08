@@ -17,8 +17,7 @@ dSHARP-CMU / cmu-lib GitHub organizations.
 | -------------- | --------- | ---------------------------------------------------------------- |
 | Python         | 3.12      | Pinned in `Dockerfile`; deps managed by uv                        |
 | Django         | 5.2.x LTS | LTS release (supported through April 2028)                        |
-| PostgreSQL     | 18       | **Required** — uses `contrib.postgres` full-text search fields   |
-| Redis          | 7.4       | Cache backend (Django built-in RedisCache, redis-py driver), 10-minute default timeout |
+| PostgreSQL     | 18       | **Required** — uses `contrib.postgres` full-text search fields; also the cache backend (Django built-in `DatabaseCache`, `django_cache_table`, 10-minute default timeout) |
 | nginx          | 1.22.0    | Reverse proxy + static file serving                              |
 | gunicorn       | 23.0      | Production WSGI server (via `SERVE_COMMAND` env var)              |
 
@@ -32,7 +31,6 @@ Key Python dependencies (declared in `pyproject.toml`, locked in `uv.lock`):
 - `django-mptt`, `django-polymorphic` — tree structures, polymorphic models
 - `lxml` — TEI XML parsing and validation
 - `psycopg[binary]` — PostgreSQL driver (psycopg3)
-- `redis` (redis-py) — drives Django's built-in `RedisCache` cache backend
 - `easy-thumbnails` — image thumbnails
 
 Dev tooling: `ruff` (formatting + linting), `coverage` + `django-coverage-plugin`.
@@ -45,8 +43,8 @@ and `django-coverage-plugin` are in `pyproject.toml` dependencies and available 
 
 ```
 .
-├── docker-compose.yml          # Dev infra only: postgres + redis (published to localhost)
-├── docker-compose.prod.yml     # Production stack: app + nginx + redis + postgres
+├── docker-compose.yml          # Dev infra only: postgres (published to localhost)
+├── docker-compose.prod.yml     # Production stack: app + nginx + postgres
 ├── Dockerfile                  # App image build (uv-based) — feeds the prod compose file
 ├── pyproject.toml              # PEP 621 dependency spec (uv)
 ├── uv.lock                     # Locked dependency manifest (uv)
@@ -81,14 +79,14 @@ and `django-coverage-plugin` are in `pyproject.toml` dependencies and available 
 ## Setup & Running
 
 This is a **host-first** development workflow. Local development runs Django directly on
-the host via `uv run ...`; Docker Compose runs only the Postgres and Redis backing
-services (ports published to localhost). The full app stack
+the host via `uv run ...`; Docker Compose runs only the Postgres backing
+service (its port published to localhost). The full app stack
 (`docker-compose.prod.yml`) is reserved for production deployments.
 
 1. Copy `.env.template` → `.env` and fill in `POSTGRES_PASSWORD`, `POSTGRES_USER`,
    `POSTGRES_DB`, `DH_SECRET`, and `ALLOWED_HOSTS`.
 2. Install dependencies: `uv sync` from the repo root.
-3. Start the backing services: `make infra` (Postgres + Redis). `docker compose up -d`
+3. Start the backing services: `make infra` (Postgres). `docker compose up -d`
    on existing volumes is a no-op if already running.
 4. Apply migrations: `make migrate`.
 5. Start the host Django dev server with debug enabled: `make local` — serves at
@@ -113,17 +111,17 @@ are read from `.env`:
 
 | Target          | Action                                                        |
 | --------------- | ------------------------------------------------------------- |
-| `make`          | Start dev infra only: `docker compose up -d postgres redis`     |
-| `make infra`    | Start dev infra (Postgres + Redis); prerequisite of migrate/test/etc. |
+| `make`          | Start dev infra only: `docker compose up -d postgres`           |
+| `make infra`    | Start dev infra (Postgres); prerequisite of migrate/test/etc.   |
 | `make local`    | Run the host Django dev server (`uv run` runserver, DEBUG on)  |
 | `make detached` | Start dev infra in the background (same as `infra`)            |
 | `make stop`     | Stop app & nginx (prod stack, `docker-compose.prod.yml`)       |
 | `make down`     | Tear down dev infra containers                                 |
 | `make attach`   | `exec bash` into the prod app container                        |
 | `make db`       | Open `psql` into postgres (user/db from `.env`)                |
-| `make restart`  | `docker compose restart app nginx redis` (prod)                |
-| `make migrate`  | Run `manage.py migrate` on the host (dev)                      |
-| `make deploy`   | Prod migrate + collectstatic + restart (inside prod app container) |
+| `make restart`  | `docker compose restart app nginx` (prod)                       |
+| `make migrate`  | Run `manage.py migrate` + `createcachetable` on the host (dev)  |
+| `make deploy`   | Prod migrate + createcachetable + collectstatic + restart (inside prod app container) |
 | `make rebuild`  | Rebuild app & nginx images without cache (prod)                |
 | `make wipe`     | Drop & recreate the database, then migrate (fresh slate)       |
 | `make blank`    | Drop the database (internal helper used by `wipe`/`restore`)   |
@@ -148,9 +146,9 @@ manage.py <command>`.
 
 - Tests live in `dh_abstracts/abstracts/tests/`.
 - Test classes use `fixtures = ["test.json"]` (generated via `make dumptest`).
-- `CachelessTestCase` (in `test_views.py`) clears the cache (Redis) before each test —
+- `CachelessTestCase` (in `test_views.py`) clears the cache (Postgres) before each test —
   use it for view tests that depend on cache state. The cache backend is Django's
-  built-in `RedisCache` (redis-py driver).
+  built-in `DatabaseCache` (the `django_cache_table` PostgreSQL table).
 - Run the full suite: `make test`.
 - ⚠️ **Parallel test runner note:** `make test` uses `--parallel 4`. On Python 3.12 with
   lxml 5.x, the `test_invalid_tei` test raises an `lxml.etree.XMLSchemaParseError` whose
@@ -214,8 +212,12 @@ Keyword, Topic, etc.). These are invoked from the editor views.
   (`SearchVector`, `SearchRank`, `SearchQuery`) and `SearchVectorField`. Do not assume
   SQLite/MySQL compatibility.
 - **Caching:** Views are wrapped with `cache_for_anon()` (caches responses for anonymous
-  users only). Redis is the cache backend. Be aware of cache invalidation when
-  modifying data through editor views.
+  users only). The cache backend is PostgreSQL `DatabaseCache`, backed by the
+  `django_cache_table` table. TTL is governed by `CACHES["default"]["TIMEOUT"]` (600s);
+  `MAX_ENTRIES`/`CULL_FREQUENCY` cull the table when it grows past 5000 rows. The table is
+  created by `manage.py createcachetable` (wired into `make migrate`/`make deploy`) — it is
+  not a model table and has no migration. Be aware of cache invalidation when modifying
+  data through editor views.
 - **TEI XML namespace:** `http://www.tei-c.org/ns/1.0`. XML files are validated against
   a TEI schema during import (see `import_xml_file`).
 - **Autocomplete:** django-autocomplete-light (`dal`) is used extensively. Autocomplete
@@ -428,10 +430,10 @@ and would each require careful design, testing, and potentially migrations.
   `docker-compose.prod.yml` use the same `db` named volume, so dev and prod both see the
   same Postgres data. `docker compose down` (dev) leaves the volume intact; the prod
   file reuses it. This is intentional.
-- **Port conflicts.** The dev compose publishes Postgres on 5432 and Redis on 6379. If
-  the host already runs either service on those ports, the bindings fail; edit the
-  `ports:` mapping in `docker-compose.yml` and set `POSTGRES_HOST`/`POSTGRES_PORT` or
-  `REDIS_URL` in `.env` accordingly (settings are env-driven).
+- **Port conflicts.** The dev compose publishes Postgres on 5432. If the host already
+  runs another service on that port, the binding fails; edit the `ports:` mapping in
+  `docker-compose.yml` and set `POSTGRES_HOST`/`POSTGRES_PORT` in `.env` accordingly
+  (settings are env-driven).
 - **Email env var mismatch.** `settings.py` reads `os.environ.get("EMAIL_ADDRESS")` for
   `DEFAULT_FROM_EMAIL`, but `.env.template` provides `DEFAULT_FROM_EMAIL=` (mismatched
   name). Additionally, `.env.template` has `EMAIL_PORT` with no `=` sign (invalid

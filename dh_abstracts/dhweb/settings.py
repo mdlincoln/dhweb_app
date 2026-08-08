@@ -138,10 +138,13 @@ DATABASES = {
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        # Host-first default; the prod compose file overrides REDIS_URL.
-        "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379"),
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache_table",
         "TIMEOUT": 60 * 10,
+        "OPTIONS": {
+            "MAX_ENTRIES": 5000,
+            "CULL_FREQUENCY": 3,
+        },
     }
 }
 

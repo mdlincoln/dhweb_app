@@ -25,7 +25,6 @@ dependencies = [
     "psycopg[binary]~=3.2",
     "tblib~=1.7.0",
     "w3lib~=1.22.0",
-    "redis~=8.1",
 ]
 
 [dependency-groups]

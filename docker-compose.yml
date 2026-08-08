@@ -1,8 +1,8 @@
-# Development infrastructure only: Postgres + Redis.
+# Development infrastructure only: Postgres.
 #
 # Local dev runs Django directly on the host via `uv run ...` (see the Makefile)
-# against the services below, whose ports are published to localhost. The full
-# application stack (app + nginx + redis + postgres) is defined in
+# against the service below, whose port is published to localhost. The full
+# application stack (app + nginx + postgres) is defined in
 # docker-compose.prod.yml for production deployments.
 #
 # The `db` named volume is shared with docker-compose.prod.yml, so dev and prod
@@ -15,13 +15,6 @@ services:
     ports:
       - "5432:5432"
     env_file: .env
-
-  redis:
-    image: redis:7.4
-    restart: always
-    ports:
-      - "6379:6379"
-    command: redis-server --save "" --appendonly no
 
 volumes:
   db: null

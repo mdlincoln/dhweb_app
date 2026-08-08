@@ -1,9 +1,8 @@
-# Production application stack: postgres + app + redis + nginx.
+# Production application stack: postgres + app + nginx.
 #
-# This is the full 4-service stack (formerly the whole of docker-compose.yml).
-# The dev compose file (docker-compose.yml) now runs only postgres + redis for
-# host-first local development; this file is used for deployments via the
-# prod Makefile targets (deploy, rebuild, restart, attach, stop).
+# The dev compose file (docker-compose.yml) runs only postgres for host-first
+# local development; this file is used for deployments via the prod Makefile
+# targets (deploy, rebuild, restart, attach, stop).
 #
 # The app service carries explicit `environment:` overrides that shadow the
 # shared .env file values with container-internal settings, matching the
@@ -27,7 +26,6 @@ services:
       - ./data:/vol/data
     environment:
       POSTGRES_HOST: postgres
-      REDIS_URL: redis://redis:6379
       STATIC_ROOT: /vol/static_files
       DATA_OUTPUT_PATH: /vol/data
     expose:
@@ -36,18 +34,9 @@ services:
       - "25:25"
     links:
       - "postgres:postgres"
-      - "redis:redis"
     env_file: .env
     depends_on:
       - postgres
-      - redis
-
-  redis:
-    image: redis:7.4
-    restart: always
-    expose:
-      - 6379
-    command: redis-server --save "" --appendonly no
 
   nginx:
     image: nginx:1.22.0

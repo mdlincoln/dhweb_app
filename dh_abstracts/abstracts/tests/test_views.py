@@ -1,9 +1,13 @@
+import json
+from datetime import timedelta
+
 from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
-import json
+from django.db import connection
+from django.utils import timezone
 
 from abstracts.models import (
     Organizer,
@@ -38,21 +42,70 @@ class CachelessTestCase(TestCase):
 
 class DefaultCacheBackendTest(TestCase):
     """
-    Verifies the default cache backend is Django's built-in Redis backend and
-    that it performs a live set/get round trip through the running Redis service.
+    Verifies the default cache backend is Django's built-in PostgreSQL
+    DatabaseCache and that it performs a live set/get round trip through the
+    django_cache_table.
     """
 
-    def test_default_cache_backend_is_redis(self):
+    def test_default_cache_backend_is_postgres(self):
         self.assertEqual(
             settings.CACHES["default"]["BACKEND"],
-            "django.core.cache.backends.redis.RedisCache",
+            "django.core.cache.backends.db.DatabaseCache",
         )
-        self.assertIn("redis", settings.CACHES["default"]["LOCATION"])
+        self.assertEqual(
+            settings.CACHES["default"]["LOCATION"], "django_cache_table"
+        )
+        self.assertEqual(settings.CACHES["default"]["TIMEOUT"], 600)
 
-    def test_cache_roundtrip_via_redis(self):
+    def test_cache_roundtrip_via_database(self):
         cache.set("_dh_cache_roundtrip", "ok", 10)
         self.assertEqual(cache.get("_dh_cache_roundtrip"), "ok")
         cache.delete("_dh_cache_roundtrip")
+
+    def test_cache_never_expires_with_none_timeout(self):
+        cache.set("_dh_cache_never", "persist", None)
+        self.assertEqual(cache.get("_dh_cache_never"), "persist")
+        cache.delete("_dh_cache_never")
+
+
+class CacheForAnonPostgresTest(TestCase):
+    """
+    Integration coverage for cache_for_anon page caching on the PostgreSQL
+    DatabaseCache backend: anonymous GETs write a django_cache_table row with
+    the 10-minute TTL, authenticated GETs write no cache row.
+    """
+
+    fixtures = ["test.json"]
+
+    def _cache_page_rows(self):
+        key_pattern = cache.make_key(
+            "views.decorators.cache.cache_page.%"
+        ) + "%"
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT cache_key, expires FROM django_cache_table "
+                "WHERE cache_key LIKE %s",
+                [key_pattern],
+            )
+            return cursor.fetchall()
+
+    def test_anonymous_get_writes_cache_row_with_ttl(self):
+        cache.clear()
+        res = self.client.get(reverse("work_detail", kwargs={"work_id": 1}))
+        self.assertEqual(res.status_code, 200)
+        rows = self._cache_page_rows()
+        self.assertGreaterEqual(len(rows), 1)
+        now = timezone.now()
+        for _, expires in rows:
+            self.assertGreaterEqual(expires, now + timedelta(seconds=590))
+            self.assertLessEqual(expires, now + timedelta(seconds=610))
+
+    def test_authenticated_get_writes_no_cache_row(self):
+        cache.clear()
+        self.client.login(username="root", password="dh-abstracts")
+        res = self.client.get(reverse("work_detail", kwargs={"work_id": 1}))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self._cache_page_rows(), [])
 
 
 def is_list_unique(x):

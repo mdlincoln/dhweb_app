@@ -9,10 +9,10 @@ POSTGRES_USER := $(shell grep -E '^POSTGRES_USER=' .env | head -1 | cut -d= -f2-
 POSTGRES_DB := $(shell grep -E '^POSTGRES_DB=' .env | head -1 | cut -d= -f2-)
 
 all:
-	$(COMPOSE_DEV) up -d postgres redis
+	$(COMPOSE_DEV) up -d postgres
 infra: all
 detached:
-	$(COMPOSE_DEV) up -d postgres redis
+	$(COMPOSE_DEV) up -d postgres
 local: all
 	$(PY) python manage.py runserver 0.0.0.0:8000
 stop:
@@ -24,11 +24,13 @@ attach:
 db: infra
 	$(COMPOSE_DEV) exec postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
 restart:
-	$(COMPOSE_PROD) restart app nginx redis
+	$(COMPOSE_PROD) restart app nginx
 migrate: infra
 	$(PY) python manage.py migrate
+	$(PY) python manage.py createcachetable
 deploy:
 	$(COMPOSE_PROD) exec app python manage.py migrate
+	$(COMPOSE_PROD) exec app python manage.py createcachetable
 	$(COMPOSE_PROD) exec app python manage.py collectstatic --no-input
 	$(MAKE) restart
 rebuild:
@@ -37,7 +39,7 @@ blank: infra
 	$(COMPOSE_DEV) exec postgres psql -U $(POSTGRES_USER) -d postgres -c 'DROP DATABASE IF EXISTS $(POSTGRES_DB);'
 wipe: blank
 	$(COMPOSE_DEV) exec postgres psql -U $(POSTGRES_USER) -d postgres -c 'CREATE DATABASE $(POSTGRES_DB);'
-	$(PY) python manage.py migrate
+	$(MAKE) migrate
 backup: infra
 	mkdir -p data
 	$(COMPOSE_DEV) exec postgres pg_dump -U $(POSTGRES_USER) -d $(POSTGRES_DB) > data/backup.sql
