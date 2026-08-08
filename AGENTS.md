@@ -221,6 +221,11 @@ Keyword, Topic, etc.). These are invoked from the editor views.
   stays login-gated.
 - **Static assets:** SCSS compiled via django-compressor + libsass. Run
   `collectstatic` on deploy (`make deploy` handles this).
+- **Storage backends:** `STORAGES` (Django 4.2+) explicitly defines the `default`
+  (`FileSystemStorage`) and `staticfiles` (`StaticFilesStorage`) backends. django-filer reads
+  `STORAGES["default"]["BACKEND"]` as its engine fallback; filer-specific storage locations
+  remain in the `FILER_STORAGES` dict. An `easy_thumbnails` alias is defined for
+  `ThumbnailFileSystemStorage` to make the easy-thumbnails default storage resolution explicit.
 - **`DEFAULT_AUTO_FIELD`** is `BigAutoField` (with explicit `id = models.BigAutoField(primary_key=True)`
   on each concrete model). New models inherit this unless a migration explicitly changes it.
 - **Time zone:** `America/New_York`.
@@ -366,28 +371,23 @@ definitions in `DENORMALIZED_HEADERS`.
 The following opportunities for adopting newer Django features remain **not** implemented yet
 and would each require careful design, testing, and potentially migrations.
 
-1. **`STORAGES` setting (Django 4.2+)**: The `FILER_STORAGES` dict (`settings.py`) and the
-   implicit default static/file storage backends could be consolidated into Django 4.2+'s
-   unified `STORAGES` setting, which provides a cleaner configuration interface and supports
-   multiple named storage backends.
-
-2. **`Model.choices` with Python `enum` (Django 5.0+)**: Model fields using choices tuples
+1. **`Model.choices` with Python `enum` (Django 5.0+)**: Model fields using choices tuples
    (e.g., `WorkType`, `License`) could be refactored to use `enum` classes with
    `models.Field.choices`, providing better type safety and IDE support.
 
-3. **Async views and ORM (Django 3.1+ / 4.2+)**: Views that perform I/O-bound work (e.g.,
+2. **Async views and ORM (Django 3.1+ / 4.2+)**: Views that perform I/O-bound work (e.g.,
    the TEI XML import, CSV export, Internet Archive loading in `ia_load.py`) could be
    converted to async views using `async def` and async ORM methods (`adelete()`,
    `acreate()`, `aget()`). This would improve throughput for concurrent requests during
    long-running operations.
 
-4. **Fix `make nightly`**: The broken `make nightly` target (calling nonexistent
+3. **Fix `make nightly`**: The broken `make nightly` target (calling nonexistent
    `regenerate_text_indices` and `export_all_csv`) could be fixed to use the actual
    `export_tables` command. With `GeneratedField` adoption, the text index regeneration
    would become automatic, potentially eliminating the need for a nightly regeneration
    command entirely.
 
-5. **Fix email env var mismatch**: The `EMAIL_ADDRESS` vs `DEFAULT_FROM_EMAIL` mismatch
+4. **Fix email env var mismatch**: The `EMAIL_ADDRESS` vs `DEFAULT_FROM_EMAIL` mismatch
    in `.env.template` and the missing `=` on `EMAIL_PORT` are pre-existing issues that
    could be addressed alongside the settings.py changes.
 

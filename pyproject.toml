@@ -102,5 +102,10 @@ ignore_missing_imports = true
 module = "debug_toolbar.*"
 ignore_missing_imports = true
 
+# easy-thumbnails ships without type stubs.
+[[tool.mypy.overrides]]
+module = "easy_thumbnails.*"
+ignore_missing_imports = true
+
 [tool.django-stubs]
 django_settings_module = "dhweb.settings"

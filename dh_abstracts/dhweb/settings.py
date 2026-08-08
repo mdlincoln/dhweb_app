@@ -174,6 +174,23 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = f"{os.environ['STATIC_ASSETS_PATH']}"
+
+# Storage backends (Django 4.2+ unified STORAGES setting).
+# Makes the implicit Django defaults explicit. django-filer reads
+# STORAGES["default"]["BACKEND"] as its engine fallback; filer-specific
+# storage locations remain configured in FILER_STORAGES below.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    "easy_thumbnails": {
+        "BACKEND": "easy_thumbnails.storage.ThumbnailFileSystemStorage",
+    },
+}
+
 LOGIN_URL = "/accounts/login"
 LOGIN_REDIRECT_URL = "/"
 
